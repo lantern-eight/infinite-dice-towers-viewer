@@ -383,6 +383,15 @@ body {{
     color: #000;
     font-weight: 600;
 }}
+.pill.multicolor-pill.excluded {{
+    background: rgba(255,80,80,0.15);
+    border-image: none;
+    background-image: none;
+    border: 1.5px solid rgba(255,80,80,0.6);
+    color: #ff5050;
+    font-weight: 600;
+    text-decoration: line-through;
+}}
 .pill.favorites-pill.active {{
     background: var(--gold);
     border-color: var(--gold);
@@ -426,6 +435,20 @@ body {{
     color: #000;
     font-weight: 600;
 }}
+.pill.volume-pill.excluded {{
+    background: rgba(255,80,80,0.15);
+    border-color: rgba(255,80,80,0.6);
+    color: #ff5050;
+    font-weight: 600;
+    text-decoration: line-through;
+}}
+.pill.excluded {{
+    background: rgba(255,80,80,0.15);
+    border-color: rgba(255,80,80,0.6);
+    color: #ff5050;
+    font-weight: 600;
+    text-decoration: line-through;
+}}
 
 /* ===== GRID ===== */
 .grid {{
@@ -458,6 +481,7 @@ body {{
     aspect-ratio: 1;
     overflow: hidden;
     background: #0d0d18;
+    cursor: pointer;
 }}
 .card-img-wrap img {{
     width: 100%;
@@ -748,6 +772,103 @@ body {{
     font-family: monospace;
 }}
 
+/* ===== TAGS ===== */
+.badge-tag {{
+    background: rgba(0,210,211,0.15);
+    color: var(--success);
+    border: 1px solid rgba(0,210,211,0.3);
+    cursor: default;
+    position: relative;
+}}
+.badge-tag .tag-remove {{
+    display: none;
+    margin-left: 0.25rem;
+    cursor: pointer;
+    font-weight: 700;
+    opacity: 0.6;
+}}
+.badge-tag:hover .tag-remove {{ display: inline; }}
+.badge-tag .tag-remove:hover {{ opacity: 1; }}
+.tag-input-wrap {{
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin-top: 0.25rem;
+}}
+.tag-add-btn {{
+    padding: 0.15rem 0.45rem;
+    border-radius: 5px;
+    font-size: 0.62rem;
+    font-weight: 500;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px dashed var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+}}
+.tag-add-btn:hover {{
+    border-color: var(--success);
+    color: var(--success);
+}}
+.tag-input {{
+    width: 80px;
+    padding: 0.15rem 0.35rem;
+    border-radius: 5px;
+    font-size: 0.62rem;
+    background: var(--bg-deep);
+    color: var(--text);
+    border: 1px solid var(--success);
+    outline: none;
+    font-family: 'Inter', sans-serif;
+}}
+.pill.tag-pill {{
+    border-color: rgba(0,210,211,0.4);
+    color: var(--success);
+}}
+.pill.tag-pill.active {{
+    background: var(--success);
+    border-color: var(--success);
+    color: #000;
+    font-weight: 600;
+}}
+.pill.tag-pill.excluded {{
+    background: rgba(255,80,80,0.15);
+    border-color: rgba(255,80,80,0.6);
+    color: #ff5050;
+    font-weight: 600;
+    text-decoration: line-through;
+}}
+
+/* ===== GRADIENT SWATCHES ===== */
+.gradient-swatches {{
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.3rem;
+}}
+.gradient-swatch {{
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}}
+.gradient-swatch:hover {{ transform: scale(1.15); }}
+.gradient-swatch.active {{
+    border-color: #fff;
+    box-shadow: 0 0 0 2px var(--accent), 0 1px 4px rgba(0,0,0,0.5);
+}}
+.gradient-swatch.none-swatch {{
+    background: var(--bg-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+}}
+
 /* ===== EMPTY STATE ===== */
 .empty-state {{
     grid-column: 1 / -1;
@@ -894,6 +1015,8 @@ body {{
             <div class="settings-panel" id="settings-panel">
                 <h3>Model Color</h3>
                 <div class="color-swatches" id="color-swatches"></div>
+                <h3>Filament Gradient</h3>
+                <div class="gradient-swatches" id="gradient-swatches"></div>
                 <h3>Material</h3>
                 <div class="setting-row">
                     <label>Metalness</label>
@@ -955,6 +1078,7 @@ const TOWERS = {tower_json};
 
 // ===== STATE =====
 let activeCategories = new Set();  // empty = all categories; non-empty = filter to these
+let excludedCategories = new Set();  // categories to exclude
 let activeMulticolor = false;
 let activeFavorites = false;
 let searchTerm = '';
@@ -972,6 +1096,45 @@ function saveFavorites() {{
         localStorage.setItem('favoriteTowers', JSON.stringify([...favoriteTowers]));
     }} catch(e) {{}}
 }}
+
+// Tags persistence via localStorage (towerName -> [tag1, tag2, ...])
+let towerTags = {{}};
+try {{
+    const savedTags = JSON.parse(localStorage.getItem('towerTags') || '{{}}');
+    towerTags = savedTags;
+}} catch(e) {{}}
+
+function saveTags() {{
+    try {{
+        localStorage.setItem('towerTags', JSON.stringify(towerTags));
+    }} catch(e) {{}}
+}}
+
+function addTag(towerName, tag) {{
+    tag = tag.trim();
+    if (!tag) return;
+    if (!towerTags[towerName]) towerTags[towerName] = [];
+    if (!towerTags[towerName].includes(tag)) {{
+        towerTags[towerName].push(tag);
+        saveTags();
+    }}
+}}
+
+function removeTag(towerName, tag) {{
+    if (!towerTags[towerName]) return;
+    towerTags[towerName] = towerTags[towerName].filter(t => t !== tag);
+    if (towerTags[towerName].length === 0) delete towerTags[towerName];
+    saveTags();
+}}
+
+function getAllTags() {{
+    const tags = new Set();
+    Object.values(towerTags).forEach(arr => arr.forEach(t => tags.add(t)));
+    return [...tags].sort();
+}}
+
+let activeTags = new Set();  // empty = no tag filter
+let excludedTags = new Set();  // tags to exclude from results
 
 // Try to load saved screenshots from memory
 try {{
@@ -992,6 +1155,8 @@ if (volumes.length > 1) {{
 }}
 
 let activeVolumes = new Set();  // empty = all volumes; non-empty = filter to these
+let excludedVolumes = new Set();  // volumes to exclude
+let excludeMulticolor = false;  // exclude multicolor towers
 
 // ===== BUILD FILTER PILLS =====
 const filtersEl = document.getElementById('filters');
@@ -999,24 +1164,45 @@ const filtersEl = document.getElementById('filters');
 function updateVolumePillStates() {{
     document.querySelectorAll('.pill.volume-pill').forEach(p => {{
         const isAll = p.textContent === 'All Volumes';
-        p.classList.toggle('active', isAll ? activeVolumes.size === 0 : activeVolumes.has(p.textContent));
+        if (isAll) {{
+            p.classList.toggle('active', activeVolumes.size === 0 && excludedVolumes.size === 0);
+        }} else {{
+            p.classList.toggle('active', activeVolumes.has(p.textContent));
+            p.classList.toggle('excluded', excludedVolumes.has(p.textContent));
+        }}
     }});
 }}
 
 function updateCategoryPillStates() {{
     document.querySelectorAll('.pill.category-pill').forEach(p => {{
         const isAll = p.textContent === 'All';
-        p.classList.toggle('active', isAll ? activeCategories.size === 0 : activeCategories.has(p.textContent));
+        if (isAll) {{
+            p.classList.toggle('active', activeCategories.size === 0 && excludedCategories.size === 0);
+        }} else {{
+            p.classList.toggle('active', activeCategories.has(p.textContent));
+            p.classList.toggle('excluded', excludedCategories.has(p.textContent));
+        }}
     }});
 }}
 
 // Multicolor filter pill (first)
 const mcPill = document.createElement('button');
 mcPill.className = 'pill multicolor-pill';
-mcPill.textContent = 'Multicolor Only';
+mcPill.textContent = 'Multicolor';
+mcPill.title = 'Click to include only, right-click to exclude';
 mcPill.onclick = () => {{
+    excludeMulticolor = false;
+    mcPill.classList.remove('excluded');
     activeMulticolor = !activeMulticolor;
     mcPill.classList.toggle('active');
+    renderGrid();
+}};
+mcPill.oncontextmenu = (e) => {{
+    e.preventDefault();
+    activeMulticolor = false;
+    mcPill.classList.remove('active');
+    excludeMulticolor = !excludeMulticolor;
+    mcPill.classList.toggle('excluded');
     renderGrid();
 }};
 filtersEl.appendChild(mcPill);
@@ -1044,6 +1230,7 @@ if (volumes.length > 1) {{
     volAll.textContent = 'All Volumes';
     volAll.onclick = () => {{
         activeVolumes.clear();
+        excludedVolumes.clear();
         updateVolumePillStates();
         renderGrid();
     }};
@@ -1053,11 +1240,24 @@ if (volumes.length > 1) {{
         const pill = document.createElement('button');
         pill.className = 'pill volume-pill';
         pill.textContent = vol;
+        pill.title = 'Click to include, right-click to exclude';
         pill.onclick = () => {{
+            excludedVolumes.delete(vol);
             if (activeVolumes.has(vol)) {{
                 activeVolumes.delete(vol);
             }} else {{
                 activeVolumes.add(vol);
+            }}
+            updateVolumePillStates();
+            renderGrid();
+        }};
+        pill.oncontextmenu = (e) => {{
+            e.preventDefault();
+            activeVolumes.delete(vol);
+            if (excludedVolumes.has(vol)) {{
+                excludedVolumes.delete(vol);
+            }} else {{
+                excludedVolumes.add(vol);
             }}
             updateVolumePillStates();
             renderGrid();
@@ -1076,10 +1276,13 @@ categories.forEach(cat => {{
     const pill = document.createElement('button');
     pill.className = 'pill category-pill' + (cat === 'All' ? ' active' : '');
     pill.textContent = cat;
+    if (cat !== 'All') pill.title = 'Click to include, right-click to exclude';
     pill.onclick = () => {{
         if (cat === 'All') {{
             activeCategories.clear();
+            excludedCategories.clear();
         }} else {{
+            excludedCategories.delete(cat);
             if (activeCategories.has(cat)) {{
                 activeCategories.delete(cat);
             }} else {{
@@ -1089,8 +1292,85 @@ categories.forEach(cat => {{
         updateCategoryPillStates();
         renderGrid();
     }};
+    if (cat !== 'All') {{
+        pill.oncontextmenu = (e) => {{
+            e.preventDefault();
+            activeCategories.delete(cat);
+            if (excludedCategories.has(cat)) {{
+                excludedCategories.delete(cat);
+            }} else {{
+                excludedCategories.add(cat);
+            }}
+            updateCategoryPillStates();
+            renderGrid();
+        }};
+    }}
     filtersEl.appendChild(pill);
 }});
+
+// ===== TAG FILTER PILLS =====
+let tagPillsContainer = null;
+let tagSeparator = null;
+
+function rebuildTagPills() {{
+    const allTags = getAllTags();
+    // Remove old tag pills and separator
+    if (tagSeparator && tagSeparator.parentNode) tagSeparator.remove();
+    if (tagPillsContainer) {{
+        tagPillsContainer.querySelectorAll('.pill.tag-pill').forEach(p => p.remove());
+        tagPillsContainer.remove();
+    }}
+    if (allTags.length === 0) return;
+
+    // Add separator
+    tagSeparator = document.createElement('span');
+    tagSeparator.style.cssText = 'width:1px;height:24px;background:var(--border);margin:0 0.3rem;';
+    tagSeparator.className = 'tag-separator';
+    filtersEl.appendChild(tagSeparator);
+
+    // Add tag pills inline
+    tagPillsContainer = document.createDocumentFragment();
+    const pillEls = [];
+    allTags.forEach(tag => {{
+        const pill = document.createElement('button');
+        pill.className = 'pill tag-pill' + (activeTags.has(tag) ? ' active' : '') + (excludedTags.has(tag) ? ' excluded' : '');
+        pill.textContent = tag;
+        pill.title = 'Click to include, right-click to exclude';
+        pill.onclick = () => {{
+            excludedTags.delete(tag);
+            if (activeTags.has(tag)) {{
+                activeTags.delete(tag);
+            }} else {{
+                activeTags.add(tag);
+            }}
+            rebuildTagPills();
+            renderGrid();
+        }};
+        pill.oncontextmenu = (e) => {{
+            e.preventDefault();
+            activeTags.delete(tag);
+            if (excludedTags.has(tag)) {{
+                excludedTags.delete(tag);
+            }} else {{
+                excludedTags.add(tag);
+            }}
+            rebuildTagPills();
+            renderGrid();
+        }};
+        filtersEl.appendChild(pill);
+        pillEls.push(pill);
+    }});
+    // Store reference for cleanup
+    tagPillsContainer = document.createElement('span');
+    tagPillsContainer.style.display = 'contents';
+    pillEls.forEach(p => {{
+        filtersEl.removeChild(p);
+        tagPillsContainer.appendChild(p);
+    }});
+    filtersEl.appendChild(tagPillsContainer);
+}}
+
+rebuildTagPills();
 
 // ===== SEARCH =====
 document.getElementById('search').addEventListener('input', (e) => {{
@@ -1105,9 +1385,20 @@ function renderGrid() {{
 
     const filtered = TOWERS.filter(t => {{
         if (activeVolumes.size > 0 && !activeVolumes.has(t.volume)) return false;
+        if (excludedVolumes.size > 0 && excludedVolumes.has(t.volume)) return false;
         if (activeCategories.size > 0 && !activeCategories.has(t.category)) return false;
+        if (excludedCategories.size > 0 && excludedCategories.has(t.category)) return false;
         if (activeMulticolor && !t.has_multicolor) return false;
+        if (excludeMulticolor && t.has_multicolor) return false;
         if (activeFavorites && !favoriteTowers.has(t.name)) return false;
+        if (activeTags.size > 0) {{
+            const tags = towerTags[t.name] || [];
+            if (!tags.some(tag => activeTags.has(tag))) return false;
+        }}
+        if (excludedTags.size > 0) {{
+            const tags = towerTags[t.name] || [];
+            if (tags.some(tag => excludedTags.has(tag))) return false;
+        }}
         if (searchTerm && !t.name.toLowerCase().includes(searchTerm)) return false;
         return true;
     }});
@@ -1130,6 +1421,11 @@ function renderGrid() {{
         if (tower.has_multicolor) {{
             badgesHTML += `<span class="badge badge-multicolor">Multicolor</span>`;
         }}
+        const tTags = towerTags[tower.name] || [];
+        tTags.forEach(tag => {{
+            badgesHTML += `<span class="badge badge-tag" data-tag="${{tag}}">${{tag}}<span class="tag-remove" data-tower="${{tower.name}}" data-tag="${{tag}}">&times;</span></span>`;
+        }});
+        badgesHTML += `<button class="tag-add-btn" data-tower="${{tower.name}}">+ tag</button>`;
 
         const imgSrc = tower.thumb ? `data:image/jpeg;base64,${{tower.thumb}}` : '';
         const imgHTML = imgSrc
@@ -1152,7 +1448,7 @@ function renderGrid() {{
             : '';
 
         card.innerHTML = `
-            <div class="card-img-wrap">
+            <div class="card-img-wrap" onclick="window.open3DViewer('${{tower.name.replace(/'/g, "\\\\'")}}')">
                 ${{imgHTML}}
             </div>
             <div class="card-body">
@@ -1187,6 +1483,51 @@ function renderGrid() {{
             saveFavorites();
             if (activeFavorites) renderGrid();
         }});
+
+        // Tag remove buttons
+        card.querySelectorAll('.tag-remove').forEach(btn => {{
+            btn.addEventListener('click', (e) => {{
+                e.stopPropagation();
+                removeTag(btn.dataset.tower, btn.dataset.tag);
+                rebuildTagPills();
+                renderGrid();
+            }});
+        }});
+
+        // Tag add button
+        const tagAddBtn = card.querySelector('.tag-add-btn');
+        if (tagAddBtn) {{
+            tagAddBtn.addEventListener('click', (e) => {{
+                e.stopPropagation();
+                const wrap = tagAddBtn.parentNode;
+                // Replace button with input
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'tag-input';
+                input.placeholder = 'tag name';
+                input.maxLength = 30;
+                tagAddBtn.style.display = 'none';
+                wrap.appendChild(input);
+                input.focus();
+
+                const commitTag = () => {{
+                    const val = input.value.trim();
+                    if (val) {{
+                        addTag(tower.name, val);
+                        rebuildTagPills();
+                        renderGrid();
+                    }} else {{
+                        input.remove();
+                        tagAddBtn.style.display = '';
+                    }}
+                }};
+                input.addEventListener('keydown', (ev) => {{
+                    if (ev.key === 'Enter') commitTag();
+                    if (ev.key === 'Escape') {{ input.remove(); tagAddBtn.style.display = ''; }}
+                }});
+                input.addEventListener('blur', commitTag);
+            }});
+        }}
 
         // Thumbnail click -> lightbox
         card.querySelectorAll('.screenshot-strip .thumb').forEach(thumb => {{
@@ -1281,6 +1622,75 @@ const SWATCH_COLORS = [
     {{ hex: '#000000', name: 'Black' }},
 ];
 
+// Gradient presets simulating longitudinal multi-color filaments
+const GRADIENT_PRESETS = [
+    {{ name: 'None', colors: null }},
+    {{ name: 'Silk Rainbow', colors: ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'] }},
+    {{ name: 'Sunset Gold', colors: ['#e74c3c', '#f39c12', '#f1c40f'] }},
+    {{ name: 'Ocean Breeze', colors: ['#0652DD', '#1abc9c', '#00d2d3'] }},
+    {{ name: 'Rose Gold', colors: ['#e91e8f', '#f39c12', '#ecf0f1'] }},
+    {{ name: 'Forest', colors: ['#27ae60', '#f1c40f', '#27ae60'] }},
+    {{ name: 'Lava', colors: ['#c0392b', '#e67e22', '#f1c40f', '#ecf0f1'] }},
+    {{ name: 'Galaxy', colors: ['#1a1a2e', '#6c5ce7', '#e91e8f', '#f1c40f'] }},
+    {{ name: 'Ice Blue', colors: ['#ecf0f1', '#74b9ff', '#0652DD'] }},
+    {{ name: 'Copper Silk', colors: ['#784212', '#e67e22', '#f8c471', '#e67e22', '#784212'] }},
+];
+
+let activeGradient = null;  // null = solid color
+
+function applyGradientToGeometry(geometry, gradientColors) {{
+    if (!gradientColors || !geometry) return;
+    const pos = geometry.attributes.position;
+    const count = pos.count;
+    const colors = new Float32Array(count * 3);
+
+    geometry.computeBoundingBox();
+    const minY = geometry.boundingBox.min.y;
+    const maxY = geometry.boundingBox.max.y;
+    const range = maxY - minY || 1;
+
+    const stops = gradientColors.map(hex => {{
+        const c = new THREE.Color(hex);
+        return [c.r, c.g, c.b];
+    }});
+    const numStops = stops.length;
+
+    for (let i = 0; i < count; i++) {{
+        const y = pos.getY(i);
+        const t = Math.max(0, Math.min(1, (y - minY) / range));
+
+        // Map t to gradient stops
+        const scaledT = t * (numStops - 1);
+        const idx = Math.min(Math.floor(scaledT), numStops - 2);
+        const frac = scaledT - idx;
+
+        colors[i * 3]     = stops[idx][0] + (stops[idx + 1][0] - stops[idx][0]) * frac;
+        colors[i * 3 + 1] = stops[idx][1] + (stops[idx + 1][1] - stops[idx][1]) * frac;
+        colors[i * 3 + 2] = stops[idx][2] + (stops[idx + 1][2] - stops[idx][2]) * frac;
+    }}
+
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}}
+
+function removeGradientFromGeometry(geometry) {{
+    if (geometry && geometry.hasAttribute('color')) {{
+        geometry.deleteAttribute('color');
+    }}
+}}
+
+function refreshGradient() {{
+    if (!currentMesh || !currentMaterial) return;
+    if (activeGradient) {{
+        applyGradientToGeometry(currentMesh.geometry, activeGradient);
+        currentMaterial.vertexColors = true;
+        currentMaterial.needsUpdate = true;
+    }} else {{
+        removeGradientFromGeometry(currentMesh.geometry);
+        currentMaterial.vertexColors = false;
+        currentMaterial.needsUpdate = true;
+    }}
+}}
+
 (function initSettingsPanel() {{
     const swatchContainer = document.getElementById('color-swatches');
     SWATCH_COLORS.forEach((c, i) => {{
@@ -1293,8 +1703,38 @@ const SWATCH_COLORS = [
             swatchContainer.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
             el.classList.add('active');
             if (currentMaterial) currentMaterial.color.set(c.hex);
+            // Deactivate gradient when picking a solid color
+            activeGradient = null;
+            gradContainer.querySelectorAll('.gradient-swatch').forEach(s => s.classList.remove('active'));
+            gradContainer.querySelector('.none-swatch').classList.add('active');
+            refreshGradient();
         }};
         swatchContainer.appendChild(el);
+    }});
+
+    // Gradient swatches
+    const gradContainer = document.getElementById('gradient-swatches');
+    GRADIENT_PRESETS.forEach((g, i) => {{
+        const el = document.createElement('div');
+        el.className = 'gradient-swatch' + (i === 0 ? ' active' : '');
+        el.title = g.name;
+        if (g.colors) {{
+            const stopStr = g.colors.map((c, ci) =>
+                `${{c}} ${{Math.round(ci / (g.colors.length - 1) * 100)}}%`
+            ).join(', ');
+            el.style.background = `linear-gradient(180deg, ${{stopStr}})`;
+        }} else {{
+            el.className += ' none-swatch';
+            el.textContent = 'Off';
+            el.style.border = '2px solid var(--border)';
+        }}
+        el.onclick = () => {{
+            gradContainer.querySelectorAll('.gradient-swatch').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+            activeGradient = g.colors || null;
+            refreshGradient();
+        }};
+        gradContainer.appendChild(el);
     }});
 
     // Settings toggle
@@ -1462,6 +1902,7 @@ window.open3DViewer = function(towerName) {{
             controls.update();
 
             scene.add(currentMesh);
+            refreshGradient();
             loading.style.display = 'none';
         }})
         .catch(err => {{
