@@ -79,7 +79,7 @@ def is_tower_dir(d):
 def scan_tower_dir(tower_dir, category, volume_name=None):
     """Scan a single tower directory and return a tower dict."""
     name = tower_dir.name
-    jpgs = list(tower_dir.glob("*.jpg")) + list(tower_dir.glob("*.jpeg"))
+    jpgs = list(tower_dir.glob("*.jpg")) + list(tower_dir.glob("*.jpeg")) + list(tower_dir.glob("*.png"))
     jpg_path = jpgs[0] if jpgs else None
 
     master_dir = tower_dir / "Master"
@@ -602,6 +602,103 @@ body {{
 }}
 @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
 
+/* ===== 3D VIEWER SETTINGS PANEL ===== */
+.modal-settings-btn {{
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+}}
+.modal-settings-btn:hover {{
+    border-color: var(--accent);
+    color: var(--text);
+}}
+.modal-settings-btn.active {{
+    border-color: var(--accent);
+    color: var(--accent);
+}}
+.settings-panel {{
+    position: absolute;
+    bottom: 3.5rem;
+    right: 1rem;
+    background: rgba(10, 10, 18, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    width: 260px;
+    display: none;
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    max-height: 55vh;
+    overflow-y: auto;
+}}
+.settings-panel.open {{ display: block; }}
+.settings-panel h3 {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 0 0 0.6rem 0;
+}}
+.settings-panel h3:not(:first-child) {{
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border);
+}}
+.color-swatches {{
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.3rem;
+}}
+.color-swatch {{
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}}
+.color-swatch:hover {{
+    transform: scale(1.15);
+}}
+.color-swatch.active {{
+    border-color: #fff;
+    box-shadow: 0 0 0 2px var(--accent), 0 1px 4px rgba(0,0,0,0.5);
+}}
+.setting-row {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0.35rem 0;
+}}
+.setting-row label {{
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    min-width: 70px;
+}}
+.setting-row input[type="range"] {{
+    flex: 1;
+    margin: 0 0.5rem;
+    accent-color: var(--accent);
+    height: 4px;
+    cursor: pointer;
+}}
+.setting-row .setting-val {{
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    min-width: 28px;
+    text-align: right;
+    font-family: monospace;
+}}
+
 /* ===== EMPTY STATE ===== */
 .empty-state {{
     grid-column: 1 / -1;
@@ -743,9 +840,46 @@ body {{
                 <div class="spinner"></div>
                 Loading 3D model...
             </div>
+            <div class="settings-panel" id="settings-panel">
+                <h3>Model Color</h3>
+                <div class="color-swatches" id="color-swatches"></div>
+                <h3>Material</h3>
+                <div class="setting-row">
+                    <label>Metalness</label>
+                    <input type="range" id="sl-metalness" min="0" max="100" value="15">
+                    <span class="setting-val" id="sv-metalness">0.15</span>
+                </div>
+                <div class="setting-row">
+                    <label>Roughness</label>
+                    <input type="range" id="sl-roughness" min="0" max="100" value="45">
+                    <span class="setting-val" id="sv-roughness">0.45</span>
+                </div>
+                <div class="setting-row">
+                    <label>Clearcoat</label>
+                    <input type="range" id="sl-clearcoat" min="0" max="100" value="30">
+                    <span class="setting-val" id="sv-clearcoat">0.30</span>
+                </div>
+                <div class="setting-row">
+                    <label>Coat Rough</label>
+                    <input type="range" id="sl-clearcoatRoughness" min="0" max="100" value="40">
+                    <span class="setting-val" id="sv-clearcoatRoughness">0.40</span>
+                </div>
+                <h3>Lighting</h3>
+                <div class="setting-row">
+                    <label>Ambient</label>
+                    <input type="range" id="sl-ambient" min="0" max="100" value="50">
+                    <span class="setting-val" id="sv-ambient">0.50</span>
+                </div>
+                <div class="setting-row">
+                    <label>Headlamp</label>
+                    <input type="range" id="sl-headlamp" min="0" max="200" value="150">
+                    <span class="setting-val" id="sv-headlamp">1.50</span>
+                </div>
+            </div>
             <div class="modal-controls">
                 <span class="modal-hint">Click &amp; drag to rotate &bull; Scroll to zoom</span>
                 <button type="button" class="modal-auto-rotate" id="modal-auto-rotate">Auto-rotate</button>
+                <button type="button" class="modal-settings-btn" id="modal-settings-btn">&#9881; Settings</button>
             </div>
         </div>
     </div>
@@ -1026,7 +1160,81 @@ function renderGrid() {{
 }}
 
 // ===== 3D VIEWER =====
-let scene, camera, renderer, controls, currentMesh, headlamp;
+let scene, camera, renderer, controls, currentMesh, headlamp, ambientLight, currentMaterial;
+
+// ===== SETTINGS PANEL =====
+const SWATCH_COLORS = [
+    {{ hex: '#cc4444', name: 'Brick Red' }},
+    {{ hex: '#e74c3c', name: 'Red' }},
+    {{ hex: '#e67e22', name: 'Orange' }},
+    {{ hex: '#f1c40f', name: 'Gold' }},
+    {{ hex: '#2ecc71', name: 'Green' }},
+    {{ hex: '#1abc9c', name: 'Teal' }},
+    {{ hex: '#3498db', name: 'Blue' }},
+    {{ hex: '#9b59b6', name: 'Purple' }},
+    {{ hex: '#e91e8f', name: 'Pink' }},
+    {{ hex: '#ecf0f1', name: 'White' }},
+    {{ hex: '#95a5a6', name: 'Silver' }},
+    {{ hex: '#34495e', name: 'Slate' }},
+    {{ hex: '#1a1a2e', name: 'Dark' }},
+    {{ hex: '#000000', name: 'Black' }},
+];
+
+(function initSettingsPanel() {{
+    const swatchContainer = document.getElementById('color-swatches');
+    SWATCH_COLORS.forEach((c, i) => {{
+        const el = document.createElement('div');
+        el.className = 'color-swatch' + (i === 0 ? ' active' : '');
+        el.style.background = c.hex;
+        el.title = c.name;
+        el.dataset.color = c.hex;
+        el.onclick = () => {{
+            swatchContainer.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+            if (currentMaterial) currentMaterial.color.set(c.hex);
+        }};
+        swatchContainer.appendChild(el);
+    }});
+
+    // Settings toggle
+    const settingsBtn = document.getElementById('modal-settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    settingsBtn.onclick = () => {{
+        settingsPanel.classList.toggle('open');
+        settingsBtn.classList.toggle('active', settingsPanel.classList.contains('open'));
+    }};
+
+    // Slider wiring
+    const sliders = [
+        {{ id: 'metalness',          prop: 'metalness',          div: 100 }},
+        {{ id: 'roughness',          prop: 'roughness',          div: 100 }},
+        {{ id: 'clearcoat',          prop: 'clearcoat',          div: 100 }},
+        {{ id: 'clearcoatRoughness', prop: 'clearcoatRoughness', div: 100 }},
+    ];
+    sliders.forEach(s => {{
+        const slider = document.getElementById('sl-' + s.id);
+        const valEl  = document.getElementById('sv-' + s.id);
+        slider.oninput = () => {{
+            const v = slider.value / s.div;
+            valEl.textContent = v.toFixed(2);
+            if (currentMaterial) currentMaterial[s.prop] = v;
+        }};
+    }});
+
+    // Ambient intensity
+    document.getElementById('sl-ambient').oninput = function() {{
+        const v = this.value / 100;
+        document.getElementById('sv-ambient').textContent = v.toFixed(2);
+        if (ambientLight) ambientLight.intensity = v;
+    }};
+
+    // Headlamp intensity
+    document.getElementById('sl-headlamp').oninput = function() {{
+        const v = this.value / 100;
+        document.getElementById('sv-headlamp').textContent = v.toFixed(2);
+        if (headlamp) headlamp.intensity = v;
+    }};
+}})();
 
 window.open3DViewer = function(towerName) {{
     const tower = TOWERS.find(t => t.name === towerName);
@@ -1039,6 +1247,7 @@ window.open3DViewer = function(towerName) {{
 
     modal.classList.add('active');
     loading.style.display = 'flex';
+    closeSettingsPanel();
 
     // Clean up previous
     if (renderer) {{
@@ -1076,13 +1285,14 @@ window.open3DViewer = function(towerName) {{
     }};
 
     // Lighting: ambient + headlamp that follows camera (always lights the side facing the viewer)
-    const ambientLight = new THREE.AmbientLight(0x404060, 0.5);
+    ambientLight = new THREE.AmbientLight(0x404060, document.getElementById('sl-ambient').value / 100);
     scene.add(ambientLight);
-    headlamp = new THREE.DirectionalLight(0xfff0dd, 1.0);
+    headlamp = new THREE.DirectionalLight(0xfff0dd, document.getElementById('sl-headlamp').value / 100);
     scene.add(headlamp);
 
     // Load STL (first master)
-    const stlPath = tower.master_stls[0].path;
+    const largestStl = tower.master_stls.reduce((a, b) => b.size_mb > a.size_mb ? b : a);
+    const stlPath = largestStl.path;
     const loader = new STLLoader();
 
     // Use fetch with encoded URI
@@ -1097,16 +1307,18 @@ window.open3DViewer = function(towerName) {{
             // STL models are typically Z-up; rotate to Y-up for upright display
             geometry.rotateX(-Math.PI / 2);
 
-            const material = new THREE.MeshPhysicalMaterial({{
-                color: 0xcc4444,
-                metalness: 0.15,
-                roughness: 0.45,
-                clearcoat: 0.3,
-                clearcoatRoughness: 0.4,
+            // Read current settings panel values
+            const activeColor = document.querySelector('#color-swatches .color-swatch.active');
+            currentMaterial = new THREE.MeshPhysicalMaterial({{
+                color: activeColor ? activeColor.dataset.color : 0xcc4444,
+                metalness: document.getElementById('sl-metalness').value / 100,
+                roughness: document.getElementById('sl-roughness').value / 100,
+                clearcoat: document.getElementById('sl-clearcoat').value / 100,
+                clearcoatRoughness: document.getElementById('sl-clearcoatRoughness').value / 100,
             }});
 
             if (currentMesh) scene.remove(currentMesh);
-            currentMesh = new THREE.Mesh(geometry, material);
+            currentMesh = new THREE.Mesh(geometry, currentMaterial);
 
             // Center and fit
             geometry.computeBoundingBox();
@@ -1166,14 +1378,20 @@ document.addEventListener('keydown', (e) => {{
 }});
 
 // ===== MODAL CLOSE =====
+function closeSettingsPanel() {{
+    document.getElementById('settings-panel').classList.remove('open');
+    document.getElementById('modal-settings-btn').classList.remove('active');
+}}
 document.getElementById('modal-close').onclick = () => {{
     document.getElementById('modal').classList.remove('active');
+    closeSettingsPanel();
     if (renderer) renderer.dispose();
     if (controls) controls.dispose();
 }};
 document.getElementById('modal').onclick = (e) => {{
     if (e.target === e.currentTarget) {{
         document.getElementById('modal').classList.remove('active');
+        closeSettingsPanel();
         if (renderer) renderer.dispose();
         if (controls) controls.dispose();
     }}
