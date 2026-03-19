@@ -390,9 +390,6 @@ body {{
     font-weight: 600;
 }}
 .star-btn {{
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
     width: 2rem;
     height: 2rem;
     border-radius: 50%;
@@ -405,12 +402,24 @@ body {{
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
-    z-index: 2;
     line-height: 1;
     padding: 0;
+    flex-shrink: 0;
 }}
 .star-btn:hover {{ background: rgba(10,10,15,0.92); color: var(--gold); }}
 .star-btn.starred {{ color: var(--gold); }}
+.modal-star-btn {{
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 0 0.4rem;
+    transition: all 0.2s;
+    line-height: 1;
+}}
+.modal-star-btn:hover {{ color: var(--gold); }}
+.modal-star-btn.starred {{ color: var(--gold); }}
 .pill.volume-pill.active {{
     background: var(--gold);
     border-color: var(--gold);
@@ -502,6 +511,10 @@ body {{
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    align-items: center;
+}}
+.card-actions .star-btn {{
+    margin-left: auto;
 }}
 .btn {{
     padding: 0.4rem 0.8rem;
@@ -869,6 +882,8 @@ body {{
     <div class="modal">
         <div class="modal-header">
             <h2 id="modal-title">Loading...</h2>
+            <button class="modal-star-btn" id="modal-star-btn" title="Add to favorites">&#x2605;</button>
+            <span style="flex:1"></span>
             <button class="modal-close" id="modal-close">&times;</button>
         </div>
         <div class="modal-body" id="modal-body">
@@ -1139,7 +1154,6 @@ function renderGrid() {{
         card.innerHTML = `
             <div class="card-img-wrap">
                 ${{imgHTML}}
-                <button class="star-btn${{isFav ? ' starred' : ''}}" data-tower="${{tower.name}}" title="${{isFav ? 'Remove from favorites' : 'Add to favorites'}}">&#x2605;</button>
             </div>
             <div class="card-body">
                 <div class="card-name">${{tower.name}}</div>
@@ -1153,6 +1167,7 @@ function renderGrid() {{
             <div class="card-actions">
                 ${{stlCount > 0 ? `<button class="btn btn-3d" onclick="window.open3DViewer('${{tower.name.replace(/'/g, "\\\\'")}}')">&#x1F4A0; View 3D</button>` : ''}}
                 <button class="btn" onclick="window.openFolder('${{tower.folder.replace(/'/g, "\\\\'")}}')">&#x1F4C2; Open Folder</button>
+                <button class="star-btn${{isFav ? ' starred' : ''}}" data-tower="${{tower.name}}" title="${{isFav ? 'Remove from favorites' : 'Add to favorites'}}">&#x2605;</button>
             </div>
         `;
 
@@ -1330,6 +1345,27 @@ window.open3DViewer = function(towerName) {{
     const body = document.getElementById('modal-body');
     const loading = document.getElementById('modal-loading');
     document.getElementById('modal-title').textContent = tower.name;
+
+    // Modal star button
+    const modalStar = document.getElementById('modal-star-btn');
+    const isStarred = favoriteTowers.has(tower.name);
+    modalStar.className = 'modal-star-btn' + (isStarred ? ' starred' : '');
+    modalStar.title = isStarred ? 'Remove from favorites' : 'Add to favorites';
+    const newModalStar = modalStar.cloneNode(true);
+    modalStar.parentNode.replaceChild(newModalStar, modalStar);
+    newModalStar.addEventListener('click', () => {{
+        if (favoriteTowers.has(tower.name)) {{
+            favoriteTowers.delete(tower.name);
+            newModalStar.classList.remove('starred');
+            newModalStar.title = 'Add to favorites';
+        }} else {{
+            favoriteTowers.add(tower.name);
+            newModalStar.classList.add('starred');
+            newModalStar.title = 'Remove from favorites';
+        }}
+        saveFavorites();
+        if (activeFavorites) renderGrid();
+    }});
 
     modal.classList.add('active');
     loading.style.display = 'flex';
