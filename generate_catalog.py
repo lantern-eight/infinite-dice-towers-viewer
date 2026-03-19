@@ -369,12 +369,48 @@ body {{
     border-color: var(--accent-bright);
     color: var(--text-bright);
 }}
+.pill.multicolor-pill {{
+    border: 1.5px solid transparent;
+    background-image: linear-gradient(var(--bg-deep), var(--bg-deep)),
+                      linear-gradient(135deg, var(--multicolor-1), var(--multicolor-2), var(--multicolor-3));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    color: var(--text);
+}}
 .pill.multicolor-pill.active {{
     background: linear-gradient(135deg, var(--multicolor-1), var(--multicolor-2), var(--multicolor-3));
     border-color: transparent;
     color: #000;
     font-weight: 600;
 }}
+.pill.favorites-pill.active {{
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #000;
+    font-weight: 600;
+}}
+.star-btn {{
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    background: rgba(10,10,15,0.72);
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 2;
+    line-height: 1;
+    padding: 0;
+}}
+.star-btn:hover {{ background: rgba(10,10,15,0.92); color: var(--gold); }}
+.star-btn.starred {{ color: var(--gold); }}
 .pill.volume-pill.active {{
     background: var(--gold);
     border-color: var(--gold);
@@ -905,8 +941,22 @@ const TOWERS = {tower_json};
 // ===== STATE =====
 let activeCategories = new Set();  // empty = all categories; non-empty = filter to these
 let activeMulticolor = false;
+let activeFavorites = false;
 let searchTerm = '';
 let screenshotData = {{}};  // towerName -> dataURL
+
+// Favorites persistence via localStorage
+let favoriteTowers = new Set();
+try {{
+    const saved = JSON.parse(localStorage.getItem('favoriteTowers') || '[]');
+    favoriteTowers = new Set(saved);
+}} catch(e) {{}}
+
+function saveFavorites() {{
+    try {{
+        localStorage.setItem('favoriteTowers', JSON.stringify([...favoriteTowers]));
+    }} catch(e) {{}}
+}}
 
 // Try to load saved screenshots from memory
 try {{
@@ -944,6 +994,33 @@ function updateCategoryPillStates() {{
         p.classList.toggle('active', isAll ? activeCategories.size === 0 : activeCategories.has(p.textContent));
     }});
 }}
+
+// Multicolor filter pill (first)
+const mcPill = document.createElement('button');
+mcPill.className = 'pill multicolor-pill';
+mcPill.textContent = 'Multicolor Only';
+mcPill.onclick = () => {{
+    activeMulticolor = !activeMulticolor;
+    mcPill.classList.toggle('active');
+    renderGrid();
+}};
+filtersEl.appendChild(mcPill);
+
+// Favorites filter pill
+const favPill = document.createElement('button');
+favPill.className = 'pill favorites-pill';
+favPill.textContent = '★ Favorites';
+favPill.onclick = () => {{
+    activeFavorites = !activeFavorites;
+    favPill.classList.toggle('active');
+    renderGrid();
+}};
+filtersEl.appendChild(favPill);
+
+// Visual separator before volume/category pills
+const sepA = document.createElement('span');
+sepA.style.cssText = 'width:1px;height:24px;background:var(--border);margin:0 0.3rem;';
+filtersEl.appendChild(sepA);
 
 // Volume pills (only shown when multiple volumes exist)
 if (volumes.length > 1) {{
@@ -1000,17 +1077,6 @@ categories.forEach(cat => {{
     filtersEl.appendChild(pill);
 }});
 
-// Multicolor filter
-const mcPill = document.createElement('button');
-mcPill.className = 'pill multicolor-pill';
-mcPill.textContent = 'Multicolor Only';
-mcPill.onclick = () => {{
-    activeMulticolor = !activeMulticolor;
-    mcPill.classList.toggle('active');
-    renderGrid();
-}};
-filtersEl.appendChild(mcPill);
-
 // ===== SEARCH =====
 document.getElementById('search').addEventListener('input', (e) => {{
     searchTerm = e.target.value.toLowerCase();
@@ -1026,6 +1092,7 @@ function renderGrid() {{
         if (activeVolumes.size > 0 && !activeVolumes.has(t.volume)) return false;
         if (activeCategories.size > 0 && !activeCategories.has(t.category)) return false;
         if (activeMulticolor && !t.has_multicolor) return false;
+        if (activeFavorites && !favoriteTowers.has(t.name)) return false;
         if (searchTerm && !t.name.toLowerCase().includes(searchTerm)) return false;
         return true;
     }});
@@ -1053,6 +1120,7 @@ function renderGrid() {{
         const imgHTML = imgSrc
             ? `<img src="${{imgSrc}}" alt="${{tower.name}}" loading="lazy">`
             : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);">No Preview</div>`;
+        const isFav = favoriteTowers.has(tower.name);
 
         // Build all screenshots: pre-loaded + user drops (screenshotData as array)
         const preLoaded = (tower.screenshots || []).map(s => `data:image/jpeg;base64,${{s}}`);
@@ -1071,6 +1139,7 @@ function renderGrid() {{
         card.innerHTML = `
             <div class="card-img-wrap">
                 ${{imgHTML}}
+                <button class="star-btn${{isFav ? ' starred' : ''}}" data-tower="${{tower.name}}" title="${{isFav ? 'Remove from favorites' : 'Add to favorites'}}">&#x2605;</button>
             </div>
             <div class="card-body">
                 <div class="card-name">${{tower.name}}</div>
@@ -1086,6 +1155,23 @@ function renderGrid() {{
                 <button class="btn" onclick="window.openFolder('${{tower.folder.replace(/'/g, "\\\\'")}}')">&#x1F4C2; Open Folder</button>
             </div>
         `;
+
+        // Star / favorite button
+        const starBtn = card.querySelector('.star-btn');
+        starBtn.addEventListener('click', (e) => {{
+            e.stopPropagation();
+            if (favoriteTowers.has(tower.name)) {{
+                favoriteTowers.delete(tower.name);
+                starBtn.classList.remove('starred');
+                starBtn.title = 'Add to favorites';
+            }} else {{
+                favoriteTowers.add(tower.name);
+                starBtn.classList.add('starred');
+                starBtn.title = 'Remove from favorites';
+            }}
+            saveFavorites();
+            if (activeFavorites) renderGrid();
+        }});
 
         // Thumbnail click -> lightbox
         card.querySelectorAll('.screenshot-strip .thumb').forEach(thumb => {{
