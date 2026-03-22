@@ -499,6 +499,34 @@ body {{
     transition: transform 0.4s ease;
 }}
 .card:hover .card-img-wrap img {{ transform: scale(1.05); }}
+.card-img-nav {{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 36px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.2s, color 0.2s;
+}}
+.card-img-nav:hover {{
+    background: rgba(255, 255, 255, 0.28);
+    color: #fff;
+}}
+.card-img-nav-prev {{ left: 8px; }}
+.card-img-nav-next {{ right: 8px; }}
 .card-badges {{
     display: flex;
     gap: 0.35rem;
@@ -1481,9 +1509,6 @@ function renderGrid() {{
         badgesHTML += `<button class="tag-add-btn" data-tower="${{tower.name}}">+ tag</button>`;
 
         const imgSrc = tower.thumb ? `data:image/jpeg;base64,${{tower.thumb}}` : '';
-        const imgHTML = imgSrc
-            ? `<img src="${{imgSrc}}" alt="${{tower.name}}" loading="lazy">`
-            : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);">No Preview</div>`;
         const isFav = favoriteTowers.has(tower.name);
 
         // Build all screenshots: pre-loaded + user drops (screenshotData as array)
@@ -1492,6 +1517,15 @@ function renderGrid() {{
             ? screenshotData[tower.name]
             : (screenshotData[tower.name] ? [screenshotData[tower.name]] : []);
         const allScreenshots = [...preLoaded, ...userDrops];
+
+        const gallery = imgSrc ? [imgSrc, ...allScreenshots] : [...allScreenshots];
+        const heroSrc = gallery.length > 0 ? gallery[0] : '';
+        const imgHTML = heroSrc
+            ? `<img class="card-hero-img" src="${{heroSrc}}" alt="${{tower.name}}" loading="lazy">`
+            : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);">No Preview</div>`;
+        const navHTML = gallery.length > 1
+            ? `<button type="button" class="card-img-nav card-img-nav-prev" aria-label="Previous image">&#8249;</button><button type="button" class="card-img-nav card-img-nav-next" aria-label="Next image">&#8250;</button>`
+            : '';
 
         const stripHTML = allScreenshots.length > 0
             ? allScreenshots.map(src => `<div class="thumb"><img src="${{src}}" alt="Screenshot" loading="lazy"></div>`).join('')
@@ -1503,6 +1537,7 @@ function renderGrid() {{
         card.innerHTML = `
             <div class="card-img-wrap" onclick="window.open3DViewer('${{tower.name.replace(/'/g, "\\\\'")}}')">
                 ${{imgHTML}}
+                ${{navHTML}}
             </div>
             <div class="card-body">
                 <div class="card-name">${{tower.name}}</div>
@@ -1579,6 +1614,23 @@ function renderGrid() {{
                     if (ev.key === 'Escape') {{ input.remove(); tagAddBtn.style.display = ''; }}
                 }});
                 input.addEventListener('blur', commitTag);
+            }});
+        }}
+
+        const heroImg = card.querySelector('.card-hero-img');
+        const prevNav = card.querySelector('.card-img-nav-prev');
+        const nextNav = card.querySelector('.card-img-nav-next');
+        if (heroImg && gallery.length > 1 && prevNav && nextNav) {{
+            let heroIdx = 0;
+            prevNav.addEventListener('click', (e) => {{
+                e.stopPropagation();
+                heroIdx = (heroIdx - 1 + gallery.length) % gallery.length;
+                heroImg.src = gallery[heroIdx];
+            }});
+            nextNav.addEventListener('click', (e) => {{
+                e.stopPropagation();
+                heroIdx = (heroIdx + 1) % gallery.length;
+                heroImg.src = gallery[heroIdx];
             }});
         }}
 
