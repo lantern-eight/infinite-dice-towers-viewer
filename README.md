@@ -165,7 +165,7 @@ This overwrites `dice_tower_catalog.html` with fresh data.
 - **Multicolor toggle** to show only towers with .3mf files
 - **3D STL viewer** — click "View 3D" on any card to load the master STL with click-drag rotation, scroll zoom, and optional auto-rotate toggle (requires `--serve`)
 - **Open Folder** — opens the tower's folder in Finder so you can grab files for your slicer (Mac only, requires `--serve`)
-- **Screenshots** — any images in a tower's folder (png, jpg, etc.) are auto-included. Sideways-scrollable strip; click a thumbnail to enlarge. Drop or click the upload box to add more (stored for the session).
+- **Screenshots** — images at the tower folder root supply the main card preview (first name when sorted; keep a single image there for a predictable hero). Extra root images and everything under `user_uploads/` appear in the sideways strip; click to enlarge. With **`--serve`**, drop or click the upload box to add images — they are saved under `user_uploads/` and picked up again the next time you generate the catalog or start the server.
 
 ## How It Works
 
@@ -173,8 +173,9 @@ This overwrites `dice_tower_catalog.html` with fresh data.
 
 ```
 Tower Name/
-  Tower Name.jpg              ← preview image (embedded as thumbnail)
-  *.png, *.jpg, etc.          ← any images here become screenshots (no special naming)
+  Tower Name.jpg              ← main preview (first sorted root image; one image recommended)
+  *.png, *.jpg, etc.          ← other root images → strip thumbnails
+  user_uploads/               ← optional; extra screenshots (UI uploads go here with --serve)
   Tower Name_MultiColor.3mf   ← optional, triggers multicolor badge
   Master/
     Tower Name_Master_1.stl   ← referenced for 3D viewer

@@ -17,8 +17,8 @@ import glob
 import http.server
 import socketserver
 import webbrowser
-import threading
 import urllib.parse
+import time
 from pathlib import Path
 from io import BytesIO
 
@@ -79,8 +79,26 @@ def is_tower_dir(d):
 def scan_tower_dir(tower_dir, category, volume_name=None):
     """Scan a single tower directory and return a tower dict."""
     name = tower_dir.name
-    jpgs = list(tower_dir.glob("*.jpg")) + list(tower_dir.glob("*.jpeg")) + list(tower_dir.glob("*.png"))
-    jpg_path = jpgs[0] if jpgs else None
+
+    # Root-level images only (non-recursive globs). Assume a single main preview at tower root;
+    # if multiple exist, the first sorted name is main and the rest appear in the strip.
+    image_extensions = ("*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif")
+    root_images = []
+    for ext in image_extensions:
+        root_images.extend(tower_dir.glob(ext))
+    root_images = sorted(set(root_images))
+    main_path = root_images[0] if root_images else None
+    root_screenshots = root_images[1:] if len(root_images) > 1 else []
+
+    # User uploads (persisted extras) live only under user_uploads/
+    uploads_dir = tower_dir / "user_uploads"
+    upload_images = []
+    if uploads_dir.is_dir():
+        for ext in image_extensions:
+            upload_images.extend(uploads_dir.glob(ext))
+    upload_images = sorted(set(upload_images))
+
+    screenshots = root_screenshots + upload_images
 
     master_dir = tower_dir / "Master"
     master_stls = sorted(master_dir.rglob("*.stl")) if master_dir.exists() else []
@@ -88,17 +106,6 @@ def scan_tower_dir(tower_dir, category, volume_name=None):
     threemf_files = list(tower_dir.glob("*MultiColor*.3mf")) + list(tower_dir.glob("*.3mf"))
     has_multicolor = len(threemf_files) > 0
     threemf_path = threemf_files[0] if threemf_files else None
-
-    # Find any image files in the tower dir (screenshots) - no specific naming required
-    image_extensions = ("*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif")
-    all_images = []
-    for ext in image_extensions:
-        all_images.extend(tower_dir.glob(ext))
-    all_images = sorted(set(all_images))
-    # Exclude main thumbnail to avoid showing it twice
-    if jpg_path:
-        all_images = [p for p in all_images if p != jpg_path]
-    screenshots = all_images
 
     stl_info = []
     for stl in master_stls:
@@ -114,7 +121,7 @@ def scan_tower_dir(tower_dir, category, volume_name=None):
         'category': category,
         'volume': volume_name,
         'folder': str(tower_dir),
-        'jpg_path': str(jpg_path) if jpg_path else None,
+        'jpg_path': str(main_path) if main_path else None,
         'has_multicolor': has_multicolor,
         'threemf_path': str(threemf_path) if threemf_path else None,
         'master_stls': stl_info,
@@ -181,15 +188,17 @@ def scan_all(root_path):
         return scan_volume(root_path), False
 
 
-def generate_html(towers, root_path, output_path, is_multi_volume=False):
+def generate_html(towers, root_path, output_path, is_multi_volume=False, verbose=True):
     """Generate the self-contained HTML catalog."""
     catalog_name = Path(root_path).name or "Catalog"
-    print(f"Generating catalog for {len(towers)} towers...")
+    if verbose:
+        print(f"Generating catalog for {len(towers)} towers...")
 
     # Build thumbnail data
     tower_data = []
     for i, t in enumerate(towers):
-        print(f"  [{i+1}/{len(towers)}] {t['name']}")
+        if verbose:
+            print(f"  [{i+1}/{len(towers)}] {t['name']}")
         thumb_b64 = ""
         if t['jpg_path'] and os.path.exists(t['jpg_path']):
             thumb_b64 = make_thumbnail_b64(t['jpg_path'])
@@ -1136,12 +1145,6 @@ function getAllTags() {{
 let activeTags = new Set();  // empty = no tag filter
 let excludedTags = new Set();  // tags to exclude from results
 
-// Try to load saved screenshots from memory
-try {{
-    const saved = window.__screenshots || {{}};
-    Object.assign(screenshotData, saved);
-}} catch(e) {{}}
-
 // ===== CATEGORIES & VOLUMES =====
 const volumes = [...new Set(TOWERS.map(t => t.volume).filter(Boolean))];
 const categories = ['All', ...new Set(TOWERS.map(t => t.category))];
@@ -1378,6 +1381,56 @@ document.getElementById('search').addEventListener('input', (e) => {{
     renderGrid();
 }});
 
+function readFileAsDataURL(file) {{
+    return new Promise((resolve, reject) => {{
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result);
+        reader.onerror = () => reject(new Error('read failed'));
+        reader.readAsDataURL(file);
+    }});
+}}
+
+async function persistScreenshotsForTower(tower, files) {{
+    const canHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+    const existing = Array.isArray(screenshotData[tower.name]) ? screenshotData[tower.name] : (screenshotData[tower.name] ? [screenshotData[tower.name]] : []);
+    const newUrls = [];
+    let anySavedToDisk = false;
+    for (const file of files) {{
+        let dataUrl = null;
+        if (canHttp) {{
+            try {{
+                const q = new URLSearchParams({{ folder: tower.folder, filename: file.name }});
+                const res = await fetch('/upload-screenshot?' + q.toString(), {{
+                    method: 'POST',
+                    body: file,
+                    headers: {{ 'Content-Type': file.type || 'application/octet-stream' }},
+                }});
+                const j = await res.json();
+                if (j.ok) {{
+                    anySavedToDisk = true;
+                    if (j.thumb) dataUrl = `data:image/jpeg;base64,${{j.thumb}}`;
+                }}
+            }} catch (err) {{
+                console.warn('Screenshot upload failed', err);
+            }}
+        }}
+        if (!dataUrl) {{
+            try {{ dataUrl = await readFileAsDataURL(file); }} catch (e) {{ continue; }}
+        }}
+        newUrls.push(dataUrl);
+    }}
+    if (newUrls.length === 0) return;
+    screenshotData[tower.name] = [...existing, ...newUrls];
+    if (canHttp && anySavedToDisk) {{
+        try {{
+            await fetch('/regenerate-catalog', {{ method: 'POST' }});
+        }} catch (e) {{
+            console.warn('Catalog refresh failed', e);
+        }}
+    }}
+    renderGrid();
+}}
+
 // ===== RENDER GRID =====
 function renderGrid() {{
     const grid = document.getElementById('grid');
@@ -1549,23 +1602,7 @@ function renderGrid() {{
             e.preventDefault();
             uploadBox.style.borderColor = '';
             const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-            if (files.length > 0) {{
-                const existing = Array.isArray(screenshotData[tower.name]) ? screenshotData[tower.name] : (screenshotData[tower.name] ? [screenshotData[tower.name]] : []);
-                let loaded = 0;
-                files.forEach(file => {{
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {{
-                        existing.push(ev.target.result);
-                        loaded++;
-                        if (loaded === files.length) {{
-                            screenshotData[tower.name] = existing;
-                            window.__screenshots = screenshotData;
-                            renderGrid();
-                        }}
-                    }};
-                    reader.readAsDataURL(file);
-                }});
-            }}
+            if (files.length > 0) persistScreenshotsForTower(tower, files);
         }});
         uploadBox.addEventListener('click', (e) => {{
             if (e.target === uploadBox) {{
@@ -1574,24 +1611,8 @@ function renderGrid() {{
                 input.accept = 'image/*';
                 input.multiple = true;
                 input.onchange = (ev) => {{
-                    const files = Array.from(ev.target.files || []);
-                    if (files.length > 0) {{
-                        const existing = Array.isArray(screenshotData[tower.name]) ? screenshotData[tower.name] : (screenshotData[tower.name] ? [screenshotData[tower.name]] : []);
-                        let loaded = 0;
-                        files.forEach(file => {{
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {{
-                                existing.push(ev.target.result);
-                                loaded++;
-                                if (loaded === files.length) {{
-                                    screenshotData[tower.name] = existing;
-                                    window.__screenshots = screenshotData;
-                                    renderGrid();
-                                }}
-                            }};
-                            reader.readAsDataURL(file);
-                        }});
-                    }}
+                    const files = Array.from(ev.target.files || []).filter(f => f.type.startsWith('image/'));
+                    if (files.length > 0) persistScreenshotsForTower(tower, files);
                 }};
                 input.click();
             }}
@@ -1975,12 +1996,151 @@ renderGrid();
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html)
 
-    print(f"\nCatalog written to: {output_path}")
+    if verbose:
+        print(f"\nCatalog written to: {output_path}")
     return output_path
 
 
+# Set by serve() so uploads can validate paths and refresh the catalog on disk.
+_CATALOG_ROOT = None
+_HTML_OUTPUT_PATH = None
+
+
+def _path_under_catalog_root(candidate, root):
+    """Return realpath of candidate if it is a directory under root, else None."""
+    try:
+        c = os.path.realpath(candidate)
+        r = os.path.realpath(root)
+        if not os.path.isdir(c):
+            return None
+        if os.path.commonpath([c, r]) != r:
+            return None
+        return c
+    except (OSError, ValueError):
+        return None
+
+
+def _safe_upload_filename(original):
+    base = os.path.basename(original or "")
+    base = re.sub(r"[^a-zA-Z0-9._-]", "_", base)
+    if not base or base.startswith("."):
+        base = f"upload_{int(time.time() * 1000)}.jpg"
+    stem, ext = os.path.splitext(base)
+    if not ext or len(ext) > 10:
+        ext = ".jpg"
+        base = stem + ext
+    return base[:200]
+
+
+def _unique_dest_path(dest_dir, filename):
+    path = os.path.join(dest_dir, filename)
+    if not os.path.exists(path):
+        return path
+    stem, ext = os.path.splitext(filename)
+    n = 1
+    while True:
+        alt = os.path.join(dest_dir, f"{stem}_{n}{ext}")
+        if not os.path.exists(alt):
+            return alt
+        n += 1
+
+
+def regenerate_catalog_html():
+    if not _CATALOG_ROOT or not _HTML_OUTPUT_PATH:
+        return
+    towers, is_multi = scan_all(_CATALOG_ROOT)
+    generate_html(
+        towers, _CATALOG_ROOT, _HTML_OUTPUT_PATH, is_multi_volume=is_multi, verbose=False
+    )
+
+
 class CatalogHandler(http.server.SimpleHTTPRequestHandler):
-    """Custom handler that serves STL files and opens folders."""
+    """Custom handler that serves STL files, opens folders, and persists screenshot uploads."""
+
+    def _send_json(self, code, obj):
+        body = json.dumps(obj).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        path_only = self.path.split("?", 1)[0]
+        if path_only == "/regenerate-catalog":
+            if not _CATALOG_ROOT:
+                self._send_json(503, {"ok": False, "error": "catalog root not configured"})
+                return
+            try:
+                regenerate_catalog_html()
+            except Exception as e:
+                self._send_json(500, {"ok": False, "error": str(e)})
+                return
+            self._send_json(200, {"ok": True})
+            return
+
+        if path_only != "/upload-screenshot":
+            self.send_error(404)
+            return
+
+        if not _CATALOG_ROOT:
+            self._send_json(503, {"ok": False, "error": "upload disabled (open catalog via --serve)"})
+            return
+
+        parsed = urllib.parse.urlparse(self.path)
+        qs = urllib.parse.parse_qs(parsed.query)
+        folder = (qs.get("folder") or [None])[0]
+        filename = (qs.get("filename") or [None])[0]
+        if not folder or not filename:
+            self._send_json(400, {"ok": False, "error": "missing folder or filename"})
+            return
+
+        abs_folder = _path_under_catalog_root(folder, _CATALOG_ROOT)
+        if not abs_folder:
+            self._send_json(403, {"ok": False, "error": "invalid tower folder"})
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self._send_json(400, {"ok": False, "error": "bad content length"})
+            return
+
+        max_bytes = 20 * 1024 * 1024
+        if length <= 0 or length > max_bytes:
+            self._send_json(400, {"ok": False, "error": "file too large or empty"})
+            return
+
+        body = self.rfile.read(length)
+        if len(body) != length:
+            self._send_json(400, {"ok": False, "error": "incomplete upload"})
+            return
+
+        uploads_dir = os.path.join(abs_folder, "user_uploads")
+        try:
+            os.makedirs(uploads_dir, exist_ok=True)
+        except OSError:
+            self._send_json(500, {"ok": False, "error": "could not create user_uploads"})
+            return
+
+        safe_name = _safe_upload_filename(filename)
+        dest = _unique_dest_path(uploads_dir, safe_name)
+        try:
+            with open(dest, "wb") as out:
+                out.write(body)
+        except OSError:
+            self._send_json(500, {"ok": False, "error": "write failed"})
+            return
+
+        try:
+            thumb_b64 = make_thumbnail_b64(dest)
+        except Exception:
+            thumb_b64 = ""
+
+        self._send_json(
+            200,
+            {"ok": True, "thumb": thumb_b64, "saved_as": os.path.basename(dest)},
+        )
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -2026,8 +2186,15 @@ class ReusableTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
 
-def serve(html_path, port=7294):
-    """Start local server and open browser."""
+def serve(html_path, volume_path, port=7294):
+    """Start local server and open browser. Refreshes the catalog from disk first."""
+    global _CATALOG_ROOT, _HTML_OUTPUT_PATH
+    _CATALOG_ROOT = os.path.abspath(os.path.realpath(volume_path))
+    _HTML_OUTPUT_PATH = os.path.abspath(html_path)
+    towers, is_multi = scan_all(volume_path)
+    print(f"Found {len(towers)} towers")
+    generate_html(towers, volume_path, html_path, is_multi_volume=is_multi)
+
     os.chdir(os.path.dirname(os.path.abspath(html_path)))
 
     handler = CatalogHandler
@@ -2057,14 +2224,12 @@ def main():
     output_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(output_dir, 'dice_tower_catalog.html')
 
-    towers, is_multi = scan_all(volume_path)
-    print(f"Found {len(towers)} towers")
-
-    generate_html(towers, volume_path, output_path, is_multi_volume=is_multi)
-
     if do_serve:
-        serve(output_path)
+        serve(output_path, volume_path)
     else:
+        towers, is_multi = scan_all(volume_path)
+        print(f"Found {len(towers)} towers")
+        generate_html(towers, volume_path, output_path, is_multi_volume=is_multi)
         print("\nTo browse with 3D STL previews, run:")
         print(f"  python3 {os.path.abspath(__file__)} --serve \"{volume_path}\"")
 
