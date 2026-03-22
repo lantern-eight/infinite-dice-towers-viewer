@@ -12,6 +12,16 @@ All Infinite Dice Towers models are designed and created by **3DVision!**
 
 This catalog viewer is just a tool for browsing your local collection — the towers themselves are their work. Check out their profile to support them and discover more of their designs.
 
+## UI
+
+![Default catalog view](images/default.png)
+
+![Multicolor filter](images/multicolor%20filter.png)
+
+![Excludes filter](images/excludes.png)
+
+![Extra screenshots on a tower card](images/extra%20screenshots.png)
+
 ---
 
 ## Getting Started
