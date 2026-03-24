@@ -325,13 +325,54 @@ body {{
     border-bottom: 1px solid var(--border);
     padding: 0.8rem 1.5rem;
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+}}
+.toolbar-search-row {{
+    display: flex;
     align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
+    gap: 0.65rem;
+    width: 100%;
+    min-width: 0;
+}}
+.toolbar-search-row .search-box {{
+    flex: 1;
+    min-width: 0;
+}}
+.global-gallery-nav {{
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.3rem;
+    align-items: center;
+}}
+.global-gallery-btn {{
+    width: 2.35rem;
+    height: 2.35rem;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    color: var(--text-dim);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}}
+.global-gallery-btn:hover {{
+    border-color: var(--accent);
+    color: var(--text);
+    background: rgba(108,92,231,0.12);
+}}
+.global-gallery-btn#global-gallery-reset {{
+    font-size: 1.05rem;
 }}
 .search-box {{
-    flex: 1;
-    min-width: 200px;
+    width: 100%;
+    min-width: 0;
     position: relative;
 }}
 .search-box input {{
@@ -354,6 +395,18 @@ body {{
     transform: translateY(-50%);
     font-size: 0.85rem;
     opacity: 0.5;
+}}
+.filter-pills-wrap {{
+    width: 100%;
+    min-width: 0;
+    max-height: 2.35rem;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+}}
+.filter-pills-wrap:hover,
+.filter-pills-wrap:focus-within {{
+    max-height: min(75vh, 1400px);
+    overflow-y: auto;
 }}
 .filter-pills {{
     display: flex;
@@ -1021,10 +1074,19 @@ body {{
 </div>
 
 <div class="toolbar">
-    <div class="search-box">
-        <input type="text" id="search" placeholder="Search towers by name..." autocomplete="off">
+    <div class="toolbar-search-row">
+        <div class="search-box">
+            <input type="text" id="search" placeholder="Search towers by name..." autocomplete="off">
+        </div>
+        <div class="global-gallery-nav" role="toolbar" aria-label="Cycle preview image on all towers">
+            <button type="button" class="global-gallery-btn" id="global-gallery-prev" title="Previous image on all towers" aria-label="Previous image on all towers">&#8249;</button>
+            <button type="button" class="global-gallery-btn" id="global-gallery-reset" title="Reset all tower previews to first image" aria-label="Reset all tower previews">&#8634;</button>
+            <button type="button" class="global-gallery-btn" id="global-gallery-next" title="Next image on all towers" aria-label="Next image on all towers">&#8250;</button>
+        </div>
     </div>
-    <div class="filter-pills" id="filters"></div>
+    <div class="filter-pills-wrap">
+        <div class="filter-pills" id="filters"></div>
+    </div>
 </div>
 
 <div class="grid" id="grid"></div>
@@ -1120,6 +1182,42 @@ let activeMulticolor = false;
 let activeFavorites = false;
 let searchTerm = '';
 let screenshotData = {{}};  // towerName -> dataURL
+
+// Global hero image cycle: all cards advance together; per-tower adjust for card arrow buttons
+let globalImageCycle = 0;
+const towerImageAdjust = {{}};
+
+function buildGalleryForTower(tower) {{
+    const imgSrc = tower.thumb ? `data:image/jpeg;base64,${{tower.thumb}}` : '';
+    const preLoaded = (tower.screenshots || []).map(s => `data:image/jpeg;base64,${{s}}`);
+    const userDrops = Array.isArray(screenshotData[tower.name])
+        ? screenshotData[tower.name]
+        : (screenshotData[tower.name] ? [screenshotData[tower.name]] : []);
+    const extras = [...preLoaded, ...userDrops];
+    const gallery = imgSrc ? [imgSrc, ...extras] : [...extras];
+    return {{ gallery, extras }};
+}}
+
+function heroIndexForTower(towerName, galleryLen) {{
+    if (galleryLen <= 1) return 0;
+    const adj = towerImageAdjust[towerName] || 0;
+    let v = globalImageCycle + adj;
+    v %= galleryLen;
+    if (v < 0) v += galleryLen;
+    return v;
+}}
+
+function refreshAllCardHeroImages() {{
+    document.querySelectorAll('.card .screenshot-section[data-tower]').forEach(section => {{
+        const towerName = section.dataset.tower;
+        const tower = TOWERS.find(t => t.name === towerName);
+        if (!tower) return;
+        const {{ gallery }} = buildGalleryForTower(tower);
+        const heroImg = section.closest('.card')?.querySelector('.card-hero-img');
+        if (!heroImg || gallery.length === 0) return;
+        heroImg.src = gallery[heroIndexForTower(towerName, gallery.length)];
+    }});
+}}
 
 // Favorites persistence via localStorage
 let favoriteTowers = new Set();
@@ -1409,6 +1507,20 @@ document.getElementById('search').addEventListener('input', (e) => {{
     renderGrid();
 }});
 
+document.getElementById('global-gallery-prev').addEventListener('click', () => {{
+    globalImageCycle -= 1;
+    refreshAllCardHeroImages();
+}});
+document.getElementById('global-gallery-next').addEventListener('click', () => {{
+    globalImageCycle += 1;
+    refreshAllCardHeroImages();
+}});
+document.getElementById('global-gallery-reset').addEventListener('click', () => {{
+    globalImageCycle = 0;
+    Object.keys(towerImageAdjust).forEach(k => delete towerImageAdjust[k]);
+    refreshAllCardHeroImages();
+}});
+
 function readFileAsDataURL(file) {{
     return new Promise((resolve, reject) => {{
         const reader = new FileReader();
@@ -1508,18 +1620,11 @@ function renderGrid() {{
         }});
         badgesHTML += `<button class="tag-add-btn" data-tower="${{tower.name}}">+ tag</button>`;
 
-        const imgSrc = tower.thumb ? `data:image/jpeg;base64,${{tower.thumb}}` : '';
         const isFav = favoriteTowers.has(tower.name);
 
-        // Build all screenshots: pre-loaded + user drops (screenshotData as array)
-        const preLoaded = (tower.screenshots || []).map(s => `data:image/jpeg;base64,${{s}}`);
-        const userDrops = Array.isArray(screenshotData[tower.name])
-            ? screenshotData[tower.name]
-            : (screenshotData[tower.name] ? [screenshotData[tower.name]] : []);
-        const allScreenshots = [...preLoaded, ...userDrops];
-
-        const gallery = imgSrc ? [imgSrc, ...allScreenshots] : [...allScreenshots];
-        const heroSrc = gallery.length > 0 ? gallery[0] : '';
+        const {{ gallery, extras }} = buildGalleryForTower(tower);
+        const heroIdx = heroIndexForTower(tower.name, gallery.length);
+        const heroSrc = gallery.length > 0 ? gallery[heroIdx] : '';
         const imgHTML = heroSrc
             ? `<img class="card-hero-img" src="${{heroSrc}}" alt="${{tower.name}}" loading="lazy">`
             : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);">No Preview</div>`;
@@ -1527,10 +1632,10 @@ function renderGrid() {{
             ? `<button type="button" class="card-img-nav card-img-nav-prev" aria-label="Previous image">&#8249;</button><button type="button" class="card-img-nav card-img-nav-next" aria-label="Next image">&#8250;</button>`
             : '';
 
-        const stripHTML = allScreenshots.length > 0
-            ? allScreenshots.map(src => `<div class="thumb"><img src="${{src}}" alt="Screenshot" loading="lazy"></div>`).join('')
+        const stripHTML = extras.length > 0
+            ? extras.map(src => `<div class="thumb"><img src="${{src}}" alt="Screenshot" loading="lazy"></div>`).join('')
             : '';
-        const stripSection = allScreenshots.length > 0
+        const stripSection = extras.length > 0
             ? `<div class="screenshot-strip">${{stripHTML}}</div>`
             : '';
 
@@ -1621,16 +1726,15 @@ function renderGrid() {{
         const prevNav = card.querySelector('.card-img-nav-prev');
         const nextNav = card.querySelector('.card-img-nav-next');
         if (heroImg && gallery.length > 1 && prevNav && nextNav) {{
-            let heroIdx = 0;
             prevNav.addEventListener('click', (e) => {{
                 e.stopPropagation();
-                heroIdx = (heroIdx - 1 + gallery.length) % gallery.length;
-                heroImg.src = gallery[heroIdx];
+                towerImageAdjust[tower.name] = (towerImageAdjust[tower.name] || 0) - 1;
+                heroImg.src = gallery[heroIndexForTower(tower.name, gallery.length)];
             }});
             nextNav.addEventListener('click', (e) => {{
                 e.stopPropagation();
-                heroIdx = (heroIdx + 1) % gallery.length;
-                heroImg.src = gallery[heroIdx];
+                towerImageAdjust[tower.name] = (towerImageAdjust[tower.name] || 0) + 1;
+                heroImg.src = gallery[heroIndexForTower(tower.name, gallery.length)];
             }});
         }}
 
