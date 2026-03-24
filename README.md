@@ -186,6 +186,33 @@ Tower Name/
 
 It resizes each JPEG to a 480px thumbnail, base64-encodes it, and bakes everything into a single HTML file with embedded CSS, JS, and image data. Three.js and STLLoader are loaded from CDN.
 
+## Troubleshooting
+
+### Uploaded screenshots don't persist (read-only folders)
+
+Some zip extractors set tower folders to **read-only**, which prevents the server from
+creating the `user_uploads/` directory inside them. Uploads will still appear in the
+browser for that session, but they won't be saved to disk and will disappear on restart.
+
+You can tell this is the issue if you see the error `"could not create user_uploads"` in
+the logs either in terminal or in the browser console when uploading.
+
+To fix this, make the tower folders writable:
+
+**Mac:**
+```bash
+chmod -R u+w "$HOME/path/to/Infinite Dice Towers/Volume 4"
+```
+
+**Windows (PowerShell):**
+```powershell
+icacls "C:\path\to\Infinite Dice Towers\Volume 4" /grant "%USERNAME%:(OI)(CI)W" /T
+```
+
+Replace the path with the volume folder that has the issue. After running the command, uploads will persist normally.
+
+---
+
 ## File Overview
 
 | File | Purpose |
