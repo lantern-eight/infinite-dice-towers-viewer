@@ -19,6 +19,7 @@ import socketserver
 import webbrowser
 import urllib.parse
 import time
+import tempfile
 from pathlib import Path
 from io import BytesIO
 
@@ -28,6 +29,13 @@ try:
 except ImportError:
     HAS_PIL = False
     print("Warning: Pillow not installed. Thumbnails will use full-size images.")
+
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
+    print("Warning: PyYAML not installed (pip install pyyaml). Favorites/tags won't persist to YAML.")
     print("Install with: pip install Pillow")
 
 
@@ -204,6 +212,48 @@ def scan_all(root_path):
         return scan_volume(root_path), False
 
 
+def _user_data_path():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'user_data.yaml')
+
+
+def load_user_data():
+    """Load favorites and tags from user_data.yaml."""
+    path = _user_data_path()
+    if not HAS_YAML or not os.path.isfile(path):
+        return {'favorites': [], 'tags': {}}
+    try:
+        with open(path, 'r') as f:
+            data = yaml.safe_load(f) or {}
+        return {
+            'favorites': data.get('favorites', []),
+            'tags': data.get('tags', {}),
+        }
+    except Exception:
+        return {'favorites': [], 'tags': {}}
+
+
+def save_user_data(favorites, tags):
+    """Atomically write favorites and tags to user_data.yaml."""
+    if not HAS_YAML:
+        return
+    path = _user_data_path()
+    sorted_tags = {k: sorted(v) for k, v in sorted(tags.items())} if tags else {}
+    data = {'favorites': sorted(favorites), 'tags': sorted_tags}
+    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w') as f:
+            f.write("# Infinite Dice Towers - User Data\n")
+            f.write("# Favorites and tags tracked here.\n\n")
+            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def generate_html(towers, root_path, output_path, is_multi_volume=False, verbose=True):
     """Generate the self-contained HTML catalog."""
     catalog_name = Path(root_path).name or "Catalog"
@@ -236,6 +286,10 @@ def generate_html(towers, root_path, output_path, is_multi_volume=False, verbose
         })
 
     tower_json = json.dumps(tower_data)
+
+    user_data = load_user_data()
+    favorites_json = json.dumps(user_data['favorites'])
+    tags_json = json.dumps(user_data['tags'])
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1235,31 +1289,21 @@ function refreshAllCardHeroImages() {{
     }});
 }}
 
-// Favorites persistence via localStorage
-let favoriteTowers = new Set();
-try {{
-    const saved = JSON.parse(localStorage.getItem('favoriteTowers') || '[]');
-    favoriteTowers = new Set(saved);
-}} catch(e) {{}}
+// Favorites and tags loaded from user_data.yaml at generation time.
+// In --serve mode, changes are persisted back to the YAML file via API.
+let favoriteTowers = new Set({favorites_json});
+let towerTags = {tags_json};
 
-function saveFavorites() {{
-    try {{
-        localStorage.setItem('favoriteTowers', JSON.stringify([...favoriteTowers]));
-    }} catch(e) {{}}
+function _persistUserData() {{
+    fetch('/api/user-data', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{favorites: [...favoriteTowers], tags: towerTags}})
+    }}).catch(() => {{}});
 }}
 
-// Tags persistence via localStorage (towerName -> [tag1, tag2, ...])
-let towerTags = {{}};
-try {{
-    const savedTags = JSON.parse(localStorage.getItem('towerTags') || '{{}}');
-    towerTags = savedTags;
-}} catch(e) {{}}
-
-function saveTags() {{
-    try {{
-        localStorage.setItem('towerTags', JSON.stringify(towerTags));
-    }} catch(e) {{}}
-}}
+function saveFavorites() {{ _persistUserData(); }}
+function saveTags() {{ _persistUserData(); }}
 
 function addTag(towerName, tag) {{
     tag = tag.trim();
@@ -2249,6 +2293,25 @@ class CatalogHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json(500, {"ok": False, "error": str(e)})
                 return
             self._send_json(200, {"ok": True})
+            return
+
+        if path_only == "/api/user-data":
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._send_json(400, {"ok": False, "error": "bad content length"})
+                return
+            body = self.rfile.read(length)
+            try:
+                data = json.loads(body)
+            except (json.JSONDecodeError, ValueError):
+                self._send_json(400, {"ok": False, "error": "invalid JSON"})
+                return
+            try:
+                save_user_data(data.get("favorites", []), data.get("tags", {}))
+                self._send_json(200, {"ok": True})
+            except Exception as e:
+                self._send_json(500, {"ok": False, "error": str(e)})
             return
 
         if path_only != "/upload-screenshot":
