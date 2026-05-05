@@ -1293,6 +1293,10 @@ function refreshAllCardHeroImages() {{
 // In --serve mode, changes are persisted back to the YAML file via API.
 let favoriteTowers = new Set({favorites_json});
 let towerTags = {tags_json};
+Object.keys(towerTags).forEach(name => {{
+    towerTags[name] = [...new Set(towerTags[name].map(t => t.toLowerCase()))];
+    if (towerTags[name].length === 0) delete towerTags[name];
+}});
 
 function _persistUserData() {{
     fetch('/api/user-data', {{
@@ -1306,7 +1310,7 @@ function saveFavorites() {{ _persistUserData(); }}
 function saveTags() {{ _persistUserData(); }}
 
 function addTag(towerName, tag) {{
-    tag = tag.trim();
+    tag = tag.trim().toLowerCase();
     if (!tag) return;
     if (!towerTags[towerName]) towerTags[towerName] = [];
     if (!towerTags[towerName].includes(tag)) {{
