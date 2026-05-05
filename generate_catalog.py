@@ -101,7 +101,23 @@ def scan_tower_dir(tower_dir, category, volume_name=None):
     screenshots = root_screenshots + upload_images
 
     master_dir = tower_dir / "Master"
-    master_stls = sorted(master_dir.rglob("*.stl")) if master_dir.exists() else []
+    master_stls = []
+    if master_dir.exists():
+        dice_tower_sub = None
+        has_terrain_sub = False
+        for sub in master_dir.iterdir():
+            if not sub.is_dir():
+                continue
+            normalized = sub.name.lower().replace('_', ' ')
+            if 'dice tower' in normalized:
+                dice_tower_sub = sub
+            elif 'terrain' in normalized:
+                has_terrain_sub = True
+
+        if dice_tower_sub and has_terrain_sub:
+            master_stls = sorted(dice_tower_sub.rglob("*.stl"))
+        else:
+            master_stls = sorted(master_dir.rglob("*.stl"))
 
     threemf_files = list(tower_dir.glob("*MultiColor*.3mf")) + list(tower_dir.glob("*.3mf"))
     has_multicolor = len(threemf_files) > 0
