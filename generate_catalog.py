@@ -77,7 +77,7 @@ def is_tower_dir(d):
     """A tower directory contains a Master/ subdirectory or STL/JPG files at its level."""
     if not d.is_dir():
         return False
-    if (d / "Master").is_dir():
+    if any(sub.is_dir() and sub.name.lower().startswith("master") for sub in d.iterdir()):
         return True
     if list(d.glob("*.stl")) or list(d.glob("*.jpg")) or list(d.glob("*.jpeg")):
         return True
@@ -108,11 +108,14 @@ def scan_tower_dir(tower_dir, category, volume_name=None):
 
     screenshots = root_screenshots + upload_images
 
-    master_dir = tower_dir / "Master"
+    master_candidates = [d for d in tower_dir.iterdir()
+                         if d.is_dir() and d.name.lower().startswith("master")]
+    master_dir = master_candidates[0] if master_candidates else None
     master_stls = []
-    if master_dir.exists():
+    if master_dir:
         dice_tower_sub = None
         has_terrain_sub = False
+        unsupported_sub = None
         for sub in master_dir.iterdir():
             if not sub.is_dir():
                 continue
@@ -121,9 +124,13 @@ def scan_tower_dir(tower_dir, category, volume_name=None):
                 dice_tower_sub = sub
             elif 'terrain' in normalized:
                 has_terrain_sub = True
+            elif 'unsupported' in normalized:
+                unsupported_sub = sub
 
         if dice_tower_sub and has_terrain_sub:
             master_stls = sorted(dice_tower_sub.rglob("*.stl"))
+        elif unsupported_sub:
+            master_stls = sorted(unsupported_sub.rglob("*.stl"))
         else:
             master_stls = sorted(master_dir.rglob("*.stl"))
 
