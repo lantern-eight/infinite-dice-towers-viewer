@@ -16,11 +16,11 @@ This catalog viewer is just a tool for browsing your local collection — the to
 
 ![Default catalog view](images/default.png)
 
+![User uploaded images](images/user%20uploaded%20images.png)
+
 ![Multicolor filter](images/multicolor%20filter.png)
 
-![Excludes filter](images/excludes.png)
-
-![Extra screenshots on a tower card](images/extra%20screenshots.png)
+![Model Viewer](images/model%20viewer.png)
 
 ---
 
@@ -165,8 +165,8 @@ This overwrites `dice_tower_catalog.html` with fresh data.
 
 - **Visual grid** of all towers with embedded JPEG thumbnails
 - **Search** by tower name (instant filtering as you type)
-- **Multi-select filters** — volume pills and category pills (Core Set, Stretch Goals) are multi-selectable; combine any volumes and categories
-- **Multicolor toggle** to show only towers with .3mf files
+- **Sidebar filters** — collapsible sidebar with volume checkboxes, Core/Stretch type toggle, multicolor and favorites quick filters, and tag checkboxes; active filters appear as dismissible chips in the toolbar
+- **Multicolor filter** to show only towers with .3mf files
 - **3D STL viewer** — click "View 3D" on any card to load the master STL with click-drag rotation, scroll zoom, and optional auto-rotate toggle (requires `--serve`)
 - **Open Folder** — opens the tower's folder in Finder so you can grab files for your slicer (Mac only, requires `--serve`)
 - **Favorites & tags** — star towers and add custom tags to organize your collection; data is stored in a local `user_data.yaml` file (see [Favorites & Tags](#favorites--tags) below)
