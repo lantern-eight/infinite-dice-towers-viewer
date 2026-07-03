@@ -397,25 +397,44 @@ body {{
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(10,10,15,0.92);
+    background: rgba(10,10,15,0.95);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
-    padding: 0.8rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.65rem;
-}}
-.toolbar-search-row {{
+    padding: 8px 16px;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    width: 100%;
-    min-width: 0;
+    gap: 8px;
+    flex-wrap: wrap;
 }}
-.toolbar-search-row .search-box {{
-    flex: 1;
-    min-width: 0;
+.filter-toggle-btn {{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.8rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+}}
+.filter-toggle-btn:hover {{
+    border-color: var(--border-glow);
+    background: rgba(108,92,231,0.1);
+}}
+.filter-badge {{
+    background: var(--accent-bright);
+    color: var(--text-bright);
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    min-width: 16px;
+    text-align: center;
 }}
 .global-gallery-nav {{
     display: flex;
@@ -448,8 +467,8 @@ body {{
     font-size: 1.05rem;
 }}
 .search-box {{
-    width: 100%;
-    min-width: 0;
+    flex: 1;
+    min-width: 180px;
     position: relative;
 }}
 .search-box input {{
@@ -473,70 +492,134 @@ body {{
     font-size: 0.85rem;
     opacity: 0.5;
 }}
-.filter-pills-wrap {{
-    width: 100%;
-    min-width: 0;
-    max-height: 2.35rem;
-    overflow: hidden;
-    transition: max-height 0.35s ease;
-}}
-.filter-pills-wrap:hover,
-.filter-pills-wrap:focus-within {{
-    max-height: min(75vh, 1400px);
-    overflow-y: auto;
-}}
-.filter-pills {{
+/* ===== SIDEBAR ===== */
+.content-wrap {{
     display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
+    min-height: calc(100vh - 180px);
 }}
-.pill {{
-    padding: 0.4rem 0.9rem;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-dim);
-    font-size: 0.78rem;
+.sidebar {{
+    width: 256px;
+    flex-shrink: 0;
+    background: #0c0c18;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    max-height: calc(100vh - 130px);
+    position: sticky;
+    top: 52px;
+}}
+.sidebar-section {{
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid #1e1e30;
+}}
+.sidebar-section:last-child {{
+    border-bottom: none;
+    padding-bottom: 16px;
+}}
+.sidebar-section-header {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}}
+.sidebar-label {{
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #8888aa;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}}
+.sidebar-clear {{
+    font-size: 0.65rem;
+    color: var(--accent-bright);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: color 0.2s;
+    background: none;
+    border: none;
     font-family: 'Inter', sans-serif;
+    padding: 0;
+}}
+.sidebar-clear:hover {{ color: var(--accent); }}
+.cb-row {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}}
+.cb-row:hover {{ background: rgba(255,255,255,0.03); }}
+.cb-box {{
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    border: 1.5px solid #3a3a50;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    color: transparent;
+}}
+.cb-box.checked-gold {{ border-color: var(--gold); background: var(--gold); color: #000; }}
+.cb-box.checked-teal {{ border-color: var(--success); background: var(--success); color: #000; }}
+.cb-box.checked-yellow {{ border-color: #feca57; background: #feca57; color: #000; }}
+.cb-label {{ font-size: 0.8rem; color: var(--text); flex: 1; }}
+.cb-count {{ font-size: 0.72rem; color: #666680; }}
+.type-toggle {{
+    display: flex;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}}
+.type-seg {{
+    flex: 1;
+    padding: 7px 0;
+    text-align: center;
+    font-size: 0.72rem;
+    cursor: pointer;
+    color: #8888aa;
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border);
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+}}
+.type-seg:first-child {{ border-left: none; }}
+.type-seg.active {{ background: var(--accent-bright); color: var(--text-bright); font-weight: 500; }}
+
+/* ===== FILTER CHIPS ===== */
+.filter-chips {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+}}
+.filter-chip {{
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 0.72rem;
     white-space: nowrap;
+    font-family: 'Inter', sans-serif;
 }}
-.pill:hover {{ border-color: var(--accent); color: var(--text); }}
-.pill.active {{
-    background: var(--accent-bright);
-    border-color: var(--accent-bright);
-    color: var(--text-bright);
+.filter-chip-x {{
+    opacity: 0.6;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
 }}
-.pill.multicolor-pill {{
-    border: 1.5px solid transparent;
-    background-image: linear-gradient(var(--bg-deep), var(--bg-deep)),
-                      linear-gradient(135deg, var(--multicolor-1), var(--multicolor-2), var(--multicolor-3));
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
-    color: var(--text);
-}}
-.pill.multicolor-pill.active {{
-    background: linear-gradient(135deg, var(--multicolor-1), var(--multicolor-2), var(--multicolor-3));
-    border-color: transparent;
-    color: #000;
-    font-weight: 600;
-}}
-.pill.multicolor-pill.excluded {{
-    background: rgba(255,80,80,0.15);
-    border-image: none;
-    background-image: none;
-    border: 1.5px solid rgba(255,80,80,0.6);
-    color: #ff5050;
-    font-weight: 600;
-    text-decoration: line-through;
-}}
-.pill.favorites-pill.active {{
-    background: var(--gold);
-    border-color: var(--gold);
-    color: #000;
-    font-weight: 600;
-}}
+.filter-chip-x:hover {{ opacity: 1; }}
+.chip-volume {{ color: #f0c040; background: rgba(240,192,64,0.15); border: 1px solid rgba(240,192,64,0.3); }}
+.chip-type {{ color: #a29bfe; background: rgba(162,155,254,0.15); border: 1px solid rgba(162,155,254,0.3); }}
+.chip-multicolor {{ color: #feca57; background: rgba(254,202,87,0.15); border: 1px solid rgba(254,202,87,0.3); }}
+.chip-favorites {{ color: #f0c040; background: rgba(240,192,64,0.15); border: 1px solid rgba(240,192,64,0.3); }}
+.chip-tag {{ color: #00d2d3; background: rgba(0,210,211,0.15); border: 1px solid rgba(0,210,211,0.3); }}
 .star-btn {{
     width: 2rem;
     height: 2rem;
@@ -568,35 +651,15 @@ body {{
 }}
 .modal-star-btn:hover {{ color: var(--gold); }}
 .modal-star-btn.starred {{ color: var(--gold); }}
-.pill.volume-pill.active {{
-    background: var(--gold);
-    border-color: var(--gold);
-    color: #000;
-    font-weight: 600;
-}}
-.pill.volume-pill.excluded {{
-    background: rgba(255,80,80,0.15);
-    border-color: rgba(255,80,80,0.6);
-    color: #ff5050;
-    font-weight: 600;
-    text-decoration: line-through;
-}}
-.pill.excluded {{
-    background: rgba(255,80,80,0.15);
-    border-color: rgba(255,80,80,0.6);
-    color: #ff5050;
-    font-weight: 600;
-    text-decoration: line-through;
-}}
-
 /* ===== GRID ===== */
 .grid {{
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.2rem;
-    padding: 1.5rem;
-    max-width: 1600px;
-    margin: 0 auto;
+    gap: 16px;
+    padding: 16px;
+    flex: 1;
+    min-width: 0;
+    align-content: start;
 }}
 
 /* ===== CARD ===== */
@@ -988,23 +1051,6 @@ body {{
     outline: none;
     font-family: 'Inter', sans-serif;
 }}
-.pill.tag-pill {{
-    border-color: rgba(0,210,211,0.4);
-    color: var(--success);
-}}
-.pill.tag-pill.active {{
-    background: var(--success);
-    border-color: var(--success);
-    color: #000;
-    font-weight: 600;
-}}
-.pill.tag-pill.excluded {{
-    background: rgba(255,80,80,0.15);
-    border-color: rgba(255,80,80,0.6);
-    color: #ff5050;
-    font-weight: 600;
-    text-decoration: line-through;
-}}
 
 /* ===== GRADIENT SWATCHES ===== */
 .gradient-swatches {{
@@ -1131,6 +1177,22 @@ body {{
 ::-webkit-scrollbar-thumb:hover {{ background: var(--text-dim); }}
 
 /* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {{
+    .sidebar {{
+        position: fixed;
+        top: 52px;
+        left: 0;
+        bottom: 0;
+        z-index: 99;
+        max-height: none;
+    }}
+    .sidebar-backdrop {{
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 98;
+    }}
+}}
 @media (max-width: 600px) {{
     .header h1 {{ font-size: 1.6rem; }}
     .grid {{ grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.8rem; padding: 0.8rem; }}
@@ -1151,22 +1213,57 @@ body {{
 </div>
 
 <div class="toolbar">
-    <div class="toolbar-search-row">
-        <div class="search-box">
-            <input type="text" id="search" placeholder="Search towers by name..." autocomplete="off">
-        </div>
-        <div class="global-gallery-nav" role="toolbar" aria-label="Cycle preview image on all towers">
-            <button type="button" class="global-gallery-btn" id="global-gallery-prev" title="Previous image on all towers" aria-label="Previous image on all towers">&#8249;</button>
-            <button type="button" class="global-gallery-btn" id="global-gallery-reset" title="Reset all tower previews to first image" aria-label="Reset all tower previews">&#8634;</button>
-            <button type="button" class="global-gallery-btn" id="global-gallery-next" title="Next image on all towers" aria-label="Next image on all towers">&#8250;</button>
-        </div>
+    <button type="button" class="filter-toggle-btn" id="filter-toggle">
+        <span style="font-size:1rem;line-height:1">&#9776;</span>
+        <span>Filters</span>
+        <span class="filter-badge" id="filter-badge" style="display:none">0</span>
+    </button>
+    <div class="search-box">
+        <input type="text" id="search" placeholder="Search towers by name..." autocomplete="off">
     </div>
-    <div class="filter-pills-wrap">
-        <div class="filter-pills" id="filters"></div>
+    <div class="filter-chips" id="filter-chips"></div>
+    <div class="global-gallery-nav" role="toolbar" aria-label="Cycle preview image on all towers">
+        <button type="button" class="global-gallery-btn" id="global-gallery-prev" title="Previous image on all towers" aria-label="Previous image on all towers">&#8249;</button>
+        <button type="button" class="global-gallery-btn" id="global-gallery-reset" title="Reset all tower previews to first image" aria-label="Reset all tower previews">&#8634;</button>
+        <button type="button" class="global-gallery-btn" id="global-gallery-next" title="Next image on all towers" aria-label="Next image on all towers">&#8250;</button>
     </div>
 </div>
 
-<div class="grid" id="grid"></div>
+<div class="content-wrap">
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-section" style="padding-top:16px">
+            <div class="sidebar-section-header">
+                <span class="sidebar-label">Quick Filters</span>
+            </div>
+            <div id="quick-filters"></div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">
+                <span class="sidebar-label">Tags</span>
+                <button class="sidebar-clear" id="clear-tags" style="display:none">Clear</button>
+            </div>
+            <div id="tag-list"></div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">
+                <span class="sidebar-label">Type</span>
+            </div>
+            <div class="type-toggle" id="type-toggle">
+                <button type="button" class="type-seg active" data-type="all">All</button>
+                <button type="button" class="type-seg" data-type="core">Core</button>
+                <button type="button" class="type-seg" data-type="stretch">Stretch</button>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-header">
+                <span class="sidebar-label">Volumes</span>
+                <button class="sidebar-clear" id="clear-volumes" style="display:none">Clear</button>
+            </div>
+            <div id="volume-list"></div>
+        </div>
+    </div>
+    <div class="grid" id="grid"></div>
+</div>
 
 <!-- Image Lightbox -->
 <div class="lightbox-overlay" id="lightbox">
@@ -1253,10 +1350,12 @@ import {{ STLLoader }} from 'three/addons/loaders/STLLoader.js';
 const TOWERS = {tower_json};
 
 // ===== STATE =====
-let activeCategories = new Set();  // empty = all categories; non-empty = filter to these
-let excludedCategories = new Set();  // categories to exclude
+let sidebarOpen = localStorage.getItem('idt-sidebar') !== 'false';
+let activeVolumes = new Set();
+let typeFilter = 'all';
 let activeMulticolor = false;
 let activeFavorites = false;
+let activeTags = new Set();
 let searchTerm = '';
 let screenshotData = {{}};  // towerName -> dataURL
 
@@ -1339,12 +1438,8 @@ function getAllTags() {{
     return [...tags].sort();
 }}
 
-let activeTags = new Set();  // empty = no tag filter
-let excludedTags = new Set();  // tags to exclude from results
-
-// ===== CATEGORIES & VOLUMES =====
+// ===== VOLUMES & STATS =====
 const volumes = [...new Set(TOWERS.map(t => t.volume).filter(Boolean))];
-const categories = ['All', ...new Set(TOWERS.map(t => t.category))];
 const totalCount = TOWERS.length;
 const multicolorCount = TOWERS.filter(t => t.has_multicolor).length;
 document.getElementById('total-count').textContent = totalCount;
@@ -1354,223 +1449,162 @@ if (volumes.length > 1) {{
     document.getElementById('volume-count').textContent = volumes.length;
 }}
 
-let activeVolumes = new Set();  // empty = all volumes; non-empty = filter to these
-let excludedVolumes = new Set();  // volumes to exclude
-let excludeMulticolor = false;  // exclude multicolor towers
-
-// ===== BUILD FILTER PILLS =====
-const filtersEl = document.getElementById('filters');
-
-function updateVolumePillStates() {{
-    document.querySelectorAll('.pill.volume-pill').forEach(p => {{
-        const isAll = p.textContent === 'All Volumes';
-        if (isAll) {{
-            p.classList.toggle('active', activeVolumes.size === 0 && excludedVolumes.size === 0);
-        }} else {{
-            p.classList.toggle('active', activeVolumes.has(p.textContent));
-            p.classList.toggle('excluded', excludedVolumes.has(p.textContent));
-        }}
-    }});
-}}
-
-function updateCategoryPillStates() {{
-    document.querySelectorAll('.pill.category-pill').forEach(p => {{
-        const isAll = p.textContent === 'All';
-        if (isAll) {{
-            p.classList.toggle('active', activeCategories.size === 0 && excludedCategories.size === 0);
-        }} else {{
-            p.classList.toggle('active', activeCategories.has(p.textContent));
-            p.classList.toggle('excluded', excludedCategories.has(p.textContent));
-        }}
-    }});
-}}
-
-// Multicolor filter pill (first)
-const mcPill = document.createElement('button');
-mcPill.className = 'pill multicolor-pill';
-mcPill.textContent = 'Multicolor';
-mcPill.title = 'Click to include only, right-click to exclude';
-mcPill.onclick = () => {{
-    excludeMulticolor = false;
-    mcPill.classList.remove('excluded');
-    activeMulticolor = !activeMulticolor;
-    mcPill.classList.toggle('active');
-    renderGrid();
-}};
-mcPill.oncontextmenu = (e) => {{
-    e.preventDefault();
-    activeMulticolor = false;
-    mcPill.classList.remove('active');
-    excludeMulticolor = !excludeMulticolor;
-    mcPill.classList.toggle('excluded');
-    renderGrid();
-}};
-filtersEl.appendChild(mcPill);
-
-// Favorites filter pill
-const favPill = document.createElement('button');
-favPill.className = 'pill favorites-pill';
-favPill.textContent = '★ Favorites';
-favPill.onclick = () => {{
-    activeFavorites = !activeFavorites;
-    favPill.classList.toggle('active');
-    renderGrid();
-}};
-filtersEl.appendChild(favPill);
-
-// Visual separator before volume/category pills
-const sepA = document.createElement('span');
-sepA.style.cssText = 'width:1px;height:24px;background:var(--border);margin:0 0.3rem;';
-filtersEl.appendChild(sepA);
-
-// Volume pills (only shown when multiple volumes exist)
-if (volumes.length > 1) {{
-    const volAll = document.createElement('button');
-    volAll.className = 'pill volume-pill active';
-    volAll.textContent = 'All Volumes';
-    volAll.onclick = () => {{
-        activeVolumes.clear();
-        excludedVolumes.clear();
-        updateVolumePillStates();
-        renderGrid();
-    }};
-    filtersEl.appendChild(volAll);
-
-    volumes.forEach(vol => {{
-        const pill = document.createElement('button');
-        pill.className = 'pill volume-pill';
-        pill.textContent = vol;
-        pill.title = 'Click to include, right-click to exclude';
-        pill.onclick = () => {{
-            excludedVolumes.delete(vol);
-            if (activeVolumes.has(vol)) {{
-                activeVolumes.delete(vol);
-            }} else {{
-                activeVolumes.add(vol);
-            }}
-            updateVolumePillStates();
-            renderGrid();
-        }};
-        pill.oncontextmenu = (e) => {{
-            e.preventDefault();
-            activeVolumes.delete(vol);
-            if (excludedVolumes.has(vol)) {{
-                excludedVolumes.delete(vol);
-            }} else {{
-                excludedVolumes.add(vol);
-            }}
-            updateVolumePillStates();
-            renderGrid();
-        }};
-        filtersEl.appendChild(pill);
-    }});
-
-    // Visual separator
-    const sep = document.createElement('span');
-    sep.style.cssText = 'width:1px;height:24px;background:var(--border);margin:0 0.3rem;';
-    filtersEl.appendChild(sep);
-}}
-
-// Category pills
-categories.forEach(cat => {{
-    const pill = document.createElement('button');
-    pill.className = 'pill category-pill' + (cat === 'All' ? ' active' : '');
-    pill.textContent = cat;
-    if (cat !== 'All') pill.title = 'Click to include, right-click to exclude';
-    pill.onclick = () => {{
-        if (cat === 'All') {{
-            activeCategories.clear();
-            excludedCategories.clear();
-        }} else {{
-            excludedCategories.delete(cat);
-            if (activeCategories.has(cat)) {{
-                activeCategories.delete(cat);
-            }} else {{
-                activeCategories.add(cat);
-            }}
-        }}
-        updateCategoryPillStates();
-        renderGrid();
-    }};
-    if (cat !== 'All') {{
-        pill.oncontextmenu = (e) => {{
-            e.preventDefault();
-            activeCategories.delete(cat);
-            if (excludedCategories.has(cat)) {{
-                excludedCategories.delete(cat);
-            }} else {{
-                excludedCategories.add(cat);
-            }}
-            updateCategoryPillStates();
-            renderGrid();
-        }};
-    }}
-    filtersEl.appendChild(pill);
+const sortedVolumes = [...volumes].sort((a, b) => {{
+    const na = parseInt(a.replace(/\\D/g, '')) || 0;
+    const nb = parseInt(b.replace(/\\D/g, '')) || 0;
+    return nb - na;
 }});
 
-// ===== TAG FILTER PILLS =====
-let tagPillsContainer = null;
-let tagSeparator = null;
-
-function rebuildTagPills() {{
-    const allTags = getAllTags();
-    // Remove old tag pills and separator
-    if (tagSeparator && tagSeparator.parentNode) tagSeparator.remove();
-    if (tagPillsContainer) {{
-        tagPillsContainer.querySelectorAll('.pill.tag-pill').forEach(p => p.remove());
-        tagPillsContainer.remove();
-    }}
-    if (allTags.length === 0) return;
-
-    // Add separator
-    tagSeparator = document.createElement('span');
-    tagSeparator.style.cssText = 'width:1px;height:24px;background:var(--border);margin:0 0.3rem;';
-    tagSeparator.className = 'tag-separator';
-    filtersEl.appendChild(tagSeparator);
-
-    // Add tag pills inline
-    tagPillsContainer = document.createDocumentFragment();
-    const pillEls = [];
-    allTags.forEach(tag => {{
-        const pill = document.createElement('button');
-        pill.className = 'pill tag-pill' + (activeTags.has(tag) ? ' active' : '') + (excludedTags.has(tag) ? ' excluded' : '');
-        pill.textContent = tag;
-        pill.title = 'Click to include, right-click to exclude';
-        pill.onclick = () => {{
-            excludedTags.delete(tag);
-            if (activeTags.has(tag)) {{
-                activeTags.delete(tag);
-            }} else {{
-                activeTags.add(tag);
-            }}
-            rebuildTagPills();
-            renderGrid();
-        }};
-        pill.oncontextmenu = (e) => {{
-            e.preventDefault();
-            activeTags.delete(tag);
-            if (excludedTags.has(tag)) {{
-                excludedTags.delete(tag);
-            }} else {{
-                excludedTags.add(tag);
-            }}
-            rebuildTagPills();
-            renderGrid();
-        }};
-        filtersEl.appendChild(pill);
-        pillEls.push(pill);
-    }});
-    // Store reference for cleanup
-    tagPillsContainer = document.createElement('span');
-    tagPillsContainer.style.display = 'contents';
-    pillEls.forEach(p => {{
-        filtersEl.removeChild(p);
-        tagPillsContainer.appendChild(p);
-    }});
-    filtersEl.appendChild(tagPillsContainer);
+// ===== SIDEBAR =====
+function toggleSidebar() {{
+    sidebarOpen = !sidebarOpen;
+    localStorage.setItem('idt-sidebar', sidebarOpen);
+    document.getElementById('sidebar').style.display = sidebarOpen ? '' : 'none';
+    const bd = document.getElementById('sidebar-backdrop');
+    if (bd) bd.style.display = sidebarOpen ? '' : 'none';
 }}
 
-rebuildTagPills();
+document.getElementById('filter-toggle').addEventListener('click', toggleSidebar);
+if (!sidebarOpen) document.getElementById('sidebar').style.display = 'none';
+
+function getActiveFilterCount() {{
+    return activeVolumes.size
+        + (typeFilter !== 'all' ? 1 : 0)
+        + (activeMulticolor ? 1 : 0)
+        + (activeFavorites ? 1 : 0)
+        + activeTags.size;
+}}
+
+function buildSidebar() {{
+    // Volumes
+    const volumeList = document.getElementById('volume-list');
+    volumeList.innerHTML = '';
+    sortedVolumes.forEach(vol => {{
+        const count = TOWERS.filter(t => t.volume === vol).length;
+        const checked = activeVolumes.has(vol);
+        const row = document.createElement('div');
+        row.className = 'cb-row';
+        row.innerHTML = `<div class="cb-box${{checked ? ' checked-gold' : ''}}">&#10003;</div><span class="cb-label">${{vol}}</span><span class="cb-count">${{count}}</span>`;
+        row.addEventListener('click', () => {{
+            if (activeVolumes.has(vol)) activeVolumes.delete(vol);
+            else activeVolumes.add(vol);
+            buildSidebar(); updateChips(); renderGrid();
+        }});
+        volumeList.appendChild(row);
+    }});
+    document.getElementById('clear-volumes').style.display = activeVolumes.size > 0 ? '' : 'none';
+
+    // Type toggle
+    document.querySelectorAll('.type-seg').forEach(seg => {{
+        seg.classList.toggle('active', seg.dataset.type === typeFilter);
+    }});
+
+    // Quick filters
+    const qf = document.getElementById('quick-filters');
+    qf.innerHTML = '';
+    const mcRow = document.createElement('div');
+    mcRow.className = 'cb-row';
+    mcRow.innerHTML = `<div class="cb-box${{activeMulticolor ? ' checked-yellow' : ''}}">&#10003;</div><span class="cb-label">Multicolor</span><span class="cb-count">${{multicolorCount}}</span>`;
+    mcRow.addEventListener('click', () => {{
+        activeMulticolor = !activeMulticolor;
+        buildSidebar(); updateChips(); renderGrid();
+    }});
+    qf.appendChild(mcRow);
+
+    const favRow = document.createElement('div');
+    favRow.className = 'cb-row';
+    const favCount = TOWERS.filter(t => favoriteTowers.has(t.name)).length;
+    favRow.innerHTML = `<div class="cb-box${{activeFavorites ? ' checked-gold' : ''}}">&#10003;</div><span class="cb-label">&#9733; Favorites</span><span class="cb-count">${{favCount}}</span>`;
+    favRow.addEventListener('click', () => {{
+        activeFavorites = !activeFavorites;
+        buildSidebar(); updateChips(); renderGrid();
+    }});
+    qf.appendChild(favRow);
+
+    // Tags
+    const tagList = document.getElementById('tag-list');
+    tagList.innerHTML = '';
+    const allTags = getAllTags();
+    allTags.forEach(tag => {{
+        const count = TOWERS.filter(t => (towerTags[t.name] || []).includes(tag)).length;
+        const checked = activeTags.has(tag);
+        const row = document.createElement('div');
+        row.className = 'cb-row';
+        row.innerHTML = `<div class="cb-box${{checked ? ' checked-teal' : ''}}">&#10003;</div><span class="cb-label">${{tag}}</span><span class="cb-count">${{count}}</span>`;
+        row.addEventListener('click', () => {{
+            if (activeTags.has(tag)) activeTags.delete(tag);
+            else activeTags.add(tag);
+            buildSidebar(); updateChips(); renderGrid();
+        }});
+        tagList.appendChild(row);
+    }});
+    document.getElementById('clear-tags').style.display = activeTags.size > 0 ? '' : 'none';
+
+    // Badge
+    const badge = document.getElementById('filter-badge');
+    const cnt = getActiveFilterCount();
+    badge.style.display = cnt > 0 ? '' : 'none';
+    badge.textContent = cnt;
+}}
+
+document.getElementById('clear-volumes').addEventListener('click', (e) => {{
+    e.stopPropagation();
+    activeVolumes.clear();
+    buildSidebar(); updateChips(); renderGrid();
+}});
+document.getElementById('clear-tags').addEventListener('click', (e) => {{
+    e.stopPropagation();
+    activeTags.clear();
+    buildSidebar(); updateChips(); renderGrid();
+}});
+document.getElementById('type-toggle').addEventListener('click', (e) => {{
+    const seg = e.target.closest('.type-seg');
+    if (!seg) return;
+    typeFilter = seg.dataset.type;
+    buildSidebar(); updateChips(); renderGrid();
+}});
+
+// ===== FILTER CHIPS =====
+function updateChips() {{
+    const container = document.getElementById('filter-chips');
+    container.innerHTML = '';
+    activeVolumes.forEach(vol => {{
+        container.insertAdjacentHTML('beforeend',
+            `<span class="filter-chip chip-volume">${{vol}}<span class="filter-chip-x" data-action="remove-volume" data-value="${{vol}}">&times;</span></span>`);
+    }});
+    if (typeFilter !== 'all') {{
+        const label = typeFilter === 'core' ? 'Core' : 'Stretch';
+        container.insertAdjacentHTML('beforeend',
+            `<span class="filter-chip chip-type">${{label}}<span class="filter-chip-x" data-action="remove-type">&times;</span></span>`);
+    }}
+    if (activeMulticolor) {{
+        container.insertAdjacentHTML('beforeend',
+            `<span class="filter-chip chip-multicolor">Multicolor<span class="filter-chip-x" data-action="remove-multicolor">&times;</span></span>`);
+    }}
+    if (activeFavorites) {{
+        container.insertAdjacentHTML('beforeend',
+            `<span class="filter-chip chip-favorites">&#9733; Favorites<span class="filter-chip-x" data-action="remove-favorites">&times;</span></span>`);
+    }}
+    activeTags.forEach(tag => {{
+        container.insertAdjacentHTML('beforeend',
+            `<span class="filter-chip chip-tag">${{tag}}<span class="filter-chip-x" data-action="remove-tag" data-value="${{tag}}">&times;</span></span>`);
+    }});
+    container.querySelectorAll('.filter-chip-x').forEach(x => {{
+        x.addEventListener('click', (e) => {{
+            e.stopPropagation();
+            const action = x.dataset.action;
+            if (action === 'remove-volume') activeVolumes.delete(x.dataset.value);
+            else if (action === 'remove-type') typeFilter = 'all';
+            else if (action === 'remove-multicolor') activeMulticolor = false;
+            else if (action === 'remove-favorites') activeFavorites = false;
+            else if (action === 'remove-tag') activeTags.delete(x.dataset.value);
+            buildSidebar(); updateChips(); renderGrid();
+        }});
+    }});
+}}
+
+buildSidebar();
+updateChips();
 
 // ===== SEARCH =====
 document.getElementById('search').addEventListener('input', (e) => {{
@@ -1648,22 +1682,16 @@ function renderGrid() {{
     grid.innerHTML = '';
 
     const filtered = TOWERS.filter(t => {{
+        if (searchTerm && !t.name.toLowerCase().includes(searchTerm)) return false;
         if (activeVolumes.size > 0 && !activeVolumes.has(t.volume)) return false;
-        if (excludedVolumes.size > 0 && excludedVolumes.has(t.volume)) return false;
-        if (activeCategories.size > 0 && !activeCategories.has(t.category)) return false;
-        if (excludedCategories.size > 0 && excludedCategories.has(t.category)) return false;
+        if (typeFilter === 'core' && !t.category.includes('Core Set')) return false;
+        if (typeFilter === 'stretch' && !t.category.includes('Stretch Goal')) return false;
         if (activeMulticolor && !t.has_multicolor) return false;
-        if (excludeMulticolor && t.has_multicolor) return false;
         if (activeFavorites && !favoriteTowers.has(t.name)) return false;
         if (activeTags.size > 0) {{
             const tags = towerTags[t.name] || [];
             if (!tags.some(tag => activeTags.has(tag))) return false;
         }}
-        if (excludedTags.size > 0) {{
-            const tags = towerTags[t.name] || [];
-            if (tags.some(tag => excludedTags.has(tag))) return false;
-        }}
-        if (searchTerm && !t.name.toLowerCase().includes(searchTerm)) return false;
         return true;
     }});
 
@@ -1753,7 +1781,7 @@ function renderGrid() {{
             btn.addEventListener('click', (e) => {{
                 e.stopPropagation();
                 removeTag(btn.dataset.tower, btn.dataset.tag);
-                rebuildTagPills();
+                buildSidebar();
                 renderGrid();
             }});
         }});
@@ -1778,7 +1806,7 @@ function renderGrid() {{
                     const val = input.value.trim();
                     if (val) {{
                         addTag(tower.name, val);
-                        rebuildTagPills();
+                        buildSidebar();
                         renderGrid();
                     }} else {{
                         input.remove();
